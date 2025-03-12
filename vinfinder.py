@@ -71,21 +71,19 @@ def imprimirDatos(item1):
         f"Marca: {item1.brand_title}\n"
         f"Foto: {item1.photo}\n"
         f"Link: {item1.url}\n"
-        '''f"Datos: {item1.raw_data}\n"'''
     )
 
 
-def startBusqueda(itemcheck, timeWait = 5, timeLimit = 15, urls = [], noTags = [], tags = []):
+def startBusqueda(linkName, timeLimit = 15, timeWait = 10, urls = [], noTags = [], tags = []):
 
-    vinted = Vinted()
-    items = vinted.items.search(
-        "https://www.vinted.es/catalog?search_text=3ds%20xl&price_from=30.0&price_to=75.0&currency=EUR&search_id=14107566922&order=newest_first",
-        20, 5)
-    '''
-    for item1 in items:
-        comprobarItem(item, tags, noTags, urls)         
-    '''
-    sleep(5)
+    while(True):
+        vinted = Vinted()
+        items = vinted.items.search(linkName,20, 5)
+        '''
+        for item1 in items:
+            comprobarItem(item, tags, noTags, urls)         
+        '''
+        sleep(timeWait)
 
 #####################
 def borrarPantalla():
@@ -171,8 +169,15 @@ def mostrar_menu(hilos_activos=[]):
 
 
 def imprimirHilos(hilos_activos):
+    printed = "[ "
+    for hilo in hilos_activos:
+        if(hilo.is_alive):
+            if(len(hilos_activos) > 1): 
+                printed += " , "
+            printed +=  "*"
+            print("EL HILO ES: " + hilo.name)
 
-    return
+    print(printed + " ]")
 
 
 def saveConf():
@@ -183,7 +188,7 @@ def loadconf():
     return
 
 
-def modifyFilters():
+def modifyFilters(timeUrlParams, tags, notTags):
     return
 
 
@@ -194,30 +199,30 @@ def endProgram(hilosActivos):
 
 
 def launchThread(params, tags, notTags, hilos_activos):
-    if(hilos_activos.length == 4):
+    if(len(hilos_activos) == 4):
         print("\nLimite de hilos alcanzado, volviendo...\n")
         sleep(1)
     else:
-        if(params[2] == ""):
+        if(len(params) == 2):
             print(f"\nEJEMPLOS:"
-                    f"https://www.vinted.es/catalog?search_text=camisa"
-                    f"https://www.vinted.es/catalog?search_text=pelota&status_ids[]=2&page=1&price_from=10&currency=EUR&price_to=30"
+                    f"\nhttps://www.vinted.es/catalog?search_text=camisa"
+                    f"\nhttps://www.vinted.es/catalog?search_text=pelota&status_ids[]=2&page=1&price_from=10&currency=EUR&price_to=30"
                     f"\n")
-            params[0] = input("Pega el link de busqueda del producto: ")
+            params.append(input("Pega el link de busqueda del producto: "))
         # Crear el hilo
-        hilo = threading.Thread(target=startBusqueda())
+        hilo = threading.Thread(target=startBusqueda, args=(params[2], params[0], params[1], [], notTags, tags))
         hilo.start()
-        hilos_activos.append(hilo.getName)
-        params[2] = ""
+        hilos_activos.append(hilo)
+        params.pop()
 
 
 def main():
 
-    timeUrlParams = [15,5,""]
+    timeUrlParams = [15,10]
     tags = ["nintendo", "3ds", "hs", "broke", "rot"]
     notTags = ["gameboy", "gba", "gamecube", "cd", "n64", "nintendo64"]
     urls = []
-    hilos_activos = []
+    hilos_activos = []  #List de tipo hilos
 
     checkParams()
 
@@ -256,6 +261,7 @@ if __name__ == "__main__":
 #     Cambio de los parametros de busqueda
 #     Compatibilidad con terminal de windows y Linux
 #     Si hay un hilo corriendo (el programa) pedir que se cierre, y opciones de segundo plano
+#     Control de errores de hilo
 
 #   recomendaciones
 # --------------------
