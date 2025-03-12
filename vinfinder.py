@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 from pip._internal.utils import urls
-from pyVinted import Vinted
 from time import sleep
 import threading
+import logging
 import requests
 import platform
 import warnings
-import telegram
 import requests
 import asyncio
 import random
@@ -15,205 +14,97 @@ import time
 import sys
 import os
 
-
-# Credenciales del BOT de Telegram
-TELEGRAM_BOT_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
-
-# Envía una notificación de un producto a un canal de Telegram
-async def send_notification(item):
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    filename = f'Hora_envio_{timestamp}.jpg'
-
-    # Enviar la notificación a Telegram
-    bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
-    await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=img_file, caption="Persona detectada.")
-    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= item.title + "\n\n" + item.url)
-    print("Notificación enviada a través de Telegram.")
-
-##############################################################################################
-def comprobarItem(itemcheck, timeWait = 5, timeLimit = 15, urls = [], noTags = [], tags = []):
-    """
-    Comprueba si un producto cumple los requisitos específicos antes de enviar la notificación.
-
-    Parámetros:
-        itemcheck (objeto): Objeto que representa un artículo.
-        timeWait (int, opcional): Tiempo de espera.
-        timeLimit (int, opcional): Tiempo máximo en segundos para considerar el artículo como reciente.
-        urls (list, opcional): Lista de URLs ya notificadas para evitar duplicados.
-        noTags (list, opcional): Lista de palabras clave que descartan el artículo.
-        tags (list, opcional): Lista de palabras clave que consideran el artículo.
-
-    Retorno:
-        None
-    """
-    name = str(itemcheck.title).lower()
-    resultado = (datetime.now().replace(microsecond=0) - datetime.fromtimestamp(itemcheck.raw_timestamp)).total_seconds()
-
-    # Parametros para tener en cuenta el articulo
-    if (resultado < timeLimit
-    and itemcheck.url not in urls
-    and any(word in name for word in tags)
-    and not any(worde in name for worde in noTags)
-    ):
-        send_notification(itemcheck)
-        urls.append(itemcheck.url)
-
-    sleep(timeWait)
-
-#########################
-def imprimirDatos(item1):
-    print(
-        f"Nombre: {item1.title}\n"
-        f"id: {item1.id}\n"
-        f"Hora Item: {datetime.fromtimestamp(item1.raw_timestamp, tz=timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}\n"
-        f"Precio: {item1.price}\n"
-        f"Marca: {item1.brand_title}\n"
-        f"Foto: {item1.photo}\n"
-        f"Link: {item1.url}\n"
-    )
+import UIface
+import threads
 
 
-def startBusqueda(linkName, timeLimit = 15, timeWait = 10, urls = [], noTags = [], tags = []):
 
-    while(True):
-        vinted = Vinted()
-        items = vinted.items.search(linkName,20, 5)
-        '''
-        for item1 in items:
-            comprobarItem(item, tags, noTags, urls)         
-        '''
-        sleep(timeWait)
+def saveConf(url, tags, no_tags):
 
-#####################
-def borrarPantalla():
-    if platform.system() == "Windows":
-        os.system('cls')
-    elif platform.system() == "Linux":
-        os.system('clear')
-    else:
-        print("\nSistema no reconocido, comando no ejecutado...\n")
+    print(f"Esta es la configuración actual:"
+          f"\nUrl de busqueda del producto: {url}"
+          f"\nTags: {tags}"
+          f"\nTags a ignorar: {no_tags}")
 
-###########################
-def checkParams(idle=True):
+    while True:
+        opcion_guardar = input("¿Quieres guardarlas en un fichero? (Si/No): ").strip().lower()
+        if opcion_guardar == "si":
 
-    if platform.system() not in ["Windows", "Linux"]:
-        print(f"Sistema {platform.system()} no compatible, puede que el programa no funcione correctamente...\n")
+            while True:
+                if os.path.exists("conf"):
+                    opcion_sobrescribir = input("Ya existe un archivo 'conf'. ¿Quieres sobrescribirlo? (Si/No): ").strip().lower()
+                else: 
+                    opcion_crear = input("No existe un archivo 'conf'. ¿Quieres crearlo y guardar la configuración? (Si/No): ").strip().lower()
+                if opcion_sobrescribir == "si":
+                    guardar_configuracion(url, tags, no_tags)
+                    print("Archivo guardado exitosamente.")
+                    return
+                elif opcion_sobrescribir == "no":
+                    print("Operación abortada.")
+                    return
+                else:
+                    print("Opción incorrecta, por favor ingresa 'Si' o 'No'.")
+        elif opcion_guardar == "no":
+            print("Operación abortada.")
+            return
+        else:
+            print("Opción incorrecta, por favor ingresa 'Si' o 'No'.")
 
-    if(idle): print("\n")
+def guardar_configuracion(url, tags, no_tags):
+    with open("conf", "w") as archivo:
+        archivo.write(f"URL: {url}\n\n")  # Guardamos la URL en el archivo
+        archivo.write("Tags: \n")
+        for tag in tags:
+            archivo.write(f"{tag}\n")
+        archivo.write("\nNo Tags: \n")
+        for no_tag in no_tags:
+            archivo.write(f"{no_tag}\n")
 
-    print(f"Sistema operativo: {platform.system()}"
-          f"\nVersión: {platform.version()}"
-          f"\nDetalles del sistema: {platform.platform()}"
-          f"\nVersion de Python: {sys.version}"
-          f"\n\nUsuario actual: {os.getlogin()}"
-          f"\nID del proceso actual: {os.getpid()}"
-          f"\nID del proceso padre: {os.getppid()}"
-          f"\nUso de memoria: {psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024):.2f} MB"
-          f"\n\nDirectorio actual: {os.getcwd()}"
-          f"\nIPv6 Pública: {requests.get("https://api64.ipify.org?format=text").text}"
-          f"\nIPv4 Pública: {requests.get("https://api4.ipify.org?format=text").text}\n\n"
-    )
+def loadConf(url_list, tags, no_tags):
+    if not os.path.exists("conf"):
+        print("No se encontró el archivo de configuración conf")
+        sleep(2)
+        return
 
-    if(idle):
-        print(
-            f" ______________________________________________\n"
-            f"|                                              |\n"
-            f"|          Pulse INTRO para iniciar...         |\n"
-            f"|______________________________________________|\n"
-        )
-        input()
-    else:
-        print(f"Pulse INTRO para salir...\n")
-        input()
+    section = None
 
-    borrarPantalla()
+    try:
+        with open("conf", "r") as archivo:
+            for linea in archivo:
+                linea = linea.strip()
+                if not linea:
+                    continue
 
+                if linea.startswith("URL:"):
+                    url_list[0] = linea.split("URL:")[1].strip()
+                elif linea.startswith("Tags:"):
+                    section = "tags"
+                    tags.clear()
+                elif linea.startswith("No Tags:"):
+                    section = "no_tags"
+                    no_tags.clear()
+                else:
+                    if section == "tags":
+                        tags.append(linea)
+                    elif section == "no_tags":
+                        no_tags.append(linea)
+    except PermissionError:
+        print("Error: No tienes permisos para leer el archivo.")
+    except UnicodeDecodeError:
+        print("Error: El archivo contiene caracteres no reconocidos.")
+    except OSError as e:
+        print(f"Error inesperado al leer el archivo: {e}")
+    
+    print("Configuración cargada con éxito:")
+    print(f"URL: {url_list[0]}")
+    print(f"Tags: {tags}")
+    print(f"Tags a ignorar: {no_tags}")
 
-def mostrar_menu(hilos_activos=[]):
-
-    print("""\n 
-       ..-+**************************+-..                                          
-     .+**********************************+.                                         
-    :+*************************************:                                        
-    =**************++*********+::**********=.                                       
-    +***********.     -*****+.  +**********+.                                       
-    +***********      :*****:  :***********+.                                       
-    +***********.     :****=   -***********+.                                       
-    +***********.     .****   .+***********+.                                       
-    +***********-     .+**:   -************+.                                       
-    +***********=      +*+.   *************+.                                       
-    +***********+.     =*-   -*************+.                                       
-    +************:     -+.  .+*************+.                                       
-    +************+     ..  .=***************.                                       
-    +*************:        =****************.                                       
-    +**************:    :+*****************+.                                       
-    :**************************************:                                        
-     .+**********************************+.                                         
-       .:=****************************=:.     
-    """)
-
-    if(len(hilos_activos) > 0):
-            imprimirHilos(hilos_activos)
-
-    print(
-        f"\n--- Menú de opciones ---\n"
-        f"1. Ver información del Programa y del Sistema\n"
-        f"2. Guardar configuración actual\n"
-        f"3. Cargar configuración\n"
-        f"4. Modificar filtros\n"
-        f"5. Iniciar\n"
-        f"6. Salir\n"
-    )
-    return input("Seleccione una opción: ")
-
-
-def imprimirHilos(hilos_activos):
-    printed = "[ "
-    for hilo in hilos_activos:
-        if(hilo.is_alive):
-            if(len(hilos_activos) > 1): 
-                printed += " , "
-            printed +=  "*"
-            print("EL HILO ES: " + hilo.name)
-
-    print(printed + " ]")
-
-
-def saveConf():
-    return
-
-
-def loadconf():
-    return
+    sleep(2)
 
 
 def modifyFilters(timeUrlParams, tags, notTags):
     return
-
-
-def endProgram(hilosActivos):
-    print("\nSaliendo del programa... \n")
-    sleep(2)
-    borrarPantalla()
-
-
-def launchThread(params, tags, notTags, hilos_activos):
-    if(len(hilos_activos) == 4):
-        print("\nLimite de hilos alcanzado, volviendo...\n")
-        sleep(1)
-    else:
-        if(len(params) == 2):
-            print(f"\nEJEMPLOS:"
-                    f"\nhttps://www.vinted.es/catalog?search_text=camisa"
-                    f"\nhttps://www.vinted.es/catalog?search_text=pelota&status_ids[]=2&page=1&price_from=10&currency=EUR&price_to=30"
-                    f"\n")
-            params.append(input("Pega el link de busqueda del producto: "))
-        # Crear el hilo
-        hilo = threading.Thread(target=startBusqueda, args=(params[2], params[0], params[1], [], notTags, tags))
-        hilo.start()
-        hilos_activos.append(hilo)
-        params.pop()
 
 
 def main():
@@ -221,33 +112,36 @@ def main():
     timeUrlParams = [15,10]
     tags = ["nintendo", "3ds", "hs", "broke", "rot"]
     notTags = ["gameboy", "gba", "gamecube", "cd", "n64", "nintendo64"]
-    urls = []
-    hilos_activos = []  #List de tipo hilos
+    urls = [""]
+    hilos_activos = []
 
-    checkParams()
+    monitor_thread = threading.Thread(target=threads.monitor, daemon=True, args=(hilos_activos,))
+    monitor_thread.start()
+
+    UIface.checkParams()
 
     while (True):
-
-        option = mostrar_menu(hilos_activos)
+        UIface.borrarPantalla()
+        option = UIface.mostrar_menu(hilos_activos)
 
         if option == "1":
-            borrarPantalla()
-            checkParams(False)
+            UIface.borrarPantalla()
+            UIface.checkParams(False)
         elif option == "2":
-            saveConf(timeUrlParams, tags, notTags)
+            saveConf(urls[0], tags, notTags)
         elif option == "3":
-            loadconf(timeUrlParams, tags, notTags)
+            loadConf(timeUrlParams, tags, notTags)
         elif option == "4":
             modifyFilters(timeUrlParams, tags, notTags)
         elif option == "5":
-            launchThread(timeUrlParams, tags, notTags, hilos_activos)
+            hilos_activos.add(threads.launchThread(timeUrlParams, tags, notTags, len(hilos_activos)))
         elif option == "6":
-            endProgram(hilos_activos) 
+            UIface.endProgram(hilos_activos) 
             return
         else:
             print("Opción no válida. Por favor, intente de nuevo.")
             sleep(1)
-        borrarPantalla()
+        UIface.borrarPantalla()
 
 
 if __name__ == "__main__":
