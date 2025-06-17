@@ -18,48 +18,6 @@ import UIface
 import threads
 
 
-
-def saveConf(url, tags, no_tags):
-
-    print(f"Esta es la configuración actual:"
-          f"\nUrl de busqueda del producto: {url}"
-          f"\nTags: {tags}"
-          f"\nTags a ignorar: {no_tags}")
-
-    while True:
-        opcion_guardar = input("¿Quieres guardarlas en un fichero? (Si/No): ").strip().lower()
-        if opcion_guardar == "si":
-
-            while True:
-                if os.path.exists("conf"):
-                    opcion_sobrescribir = input("Ya existe un archivo 'conf'. ¿Quieres sobrescribirlo? (Si/No): ").strip().lower()
-                else: 
-                    opcion_crear = input("No existe un archivo 'conf'. ¿Quieres crearlo y guardar la configuración? (Si/No): ").strip().lower()
-                if opcion_sobrescribir == "si":
-                    guardar_configuracion(url, tags, no_tags)
-                    print("Archivo guardado exitosamente.")
-                    return
-                elif opcion_sobrescribir == "no":
-                    print("Operación abortada.")
-                    return
-                else:
-                    print("Opción incorrecta, por favor ingresa 'Si' o 'No'.")
-        elif opcion_guardar == "no":
-            print("Operación abortada.")
-            return
-        else:
-            print("Opción incorrecta, por favor ingresa 'Si' o 'No'.")
-
-def guardar_configuracion(url, tags, no_tags):
-    with open("conf", "w") as archivo:
-        archivo.write(f"URL: {url}\n\n")  # Guardamos la URL en el archivo
-        archivo.write("Tags: \n")
-        for tag in tags:
-            archivo.write(f"{tag}\n")
-        archivo.write("\nNo Tags: \n")
-        for no_tag in no_tags:
-            archivo.write(f"{no_tag}\n")
-
 def loadConf(url_list, tags, no_tags):
     if not os.path.exists("conf"):
         print("No se encontró el archivo de configuración conf")
@@ -128,14 +86,10 @@ def main():
             UIface.borrarPantalla()
             UIface.checkParams(False)
         elif option == "2":
-            saveConf(urls[0], tags, notTags)
-        elif option == "3":
             loadConf(timeUrlParams, tags, notTags)
-        elif option == "4":
-            modifyFilters(timeUrlParams, tags, notTags)
-        elif option == "5":
+        elif option == "3":
             hilos_activos.add(threads.launchThread(timeUrlParams, tags, notTags, len(hilos_activos)))
-        elif option == "6":
+        elif option == "4":
             UIface.endProgram(hilos_activos) 
             return
         else:

@@ -76,10 +76,11 @@ def startBusqueda(linkName, timeLimit = 15, timeWait = 10, urls = [], noTags = [
     while(True):
         vinted = Vinted()
         items = vinted.items.search(linkName,20, 5)
-        '''
+        
         for item1 in items:
+            item1.photo
             comprobarItem(item, tags, noTags, urls)         
-        '''
+        
         sleep(timeWait)
 
 

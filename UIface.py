@@ -36,11 +36,9 @@ def mostrar_menu(hilos_activos=[]):
     print(
         f"\n--- Menú de opciones ---\n"
         f"1. Ver información del Programa y del Sistema\n"
-        f"2. Guardar configuración actual\n"
-        f"3. Cargar configuración\n"
-        f"4. Modificar filtros\n"
-        f"5. Iniciar\n"
-        f"6. Salir\n"
+        f"2. Cargar configuración\n"
+        f"3. Iniciar\n"
+        f"4. Salir\n"
     )
     return input("Seleccione una opción: ")
 
