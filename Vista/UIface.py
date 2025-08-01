@@ -1,11 +1,9 @@
 from datetime import datetime, timezone
-from time import sleep
 import platform
 import requests
 import psutil
 import sys
 import os
-
 
 
 def mostrar_menu(hilos_activos=[]):
@@ -30,8 +28,8 @@ def mostrar_menu(hilos_activos=[]):
      .+**********************************+.
        .:=****************************=:.""")
 
-    if(len(hilos_activos) > 0):
-            imprimirHilos(hilos_activos)
+    if hilos_activos:
+        imprimirHilos(hilos_activos)
 
     print(
         f"\n--- Menú de opciones ---\n"
@@ -43,18 +41,19 @@ def mostrar_menu(hilos_activos=[]):
     return input("Seleccione una opción: ")
 
 
-
 def imprimirHilos(hilos_activos):
     printed = "[ "
+    first = True
+
     for hilo in hilos_activos:
-        if(hilo.is_alive):
-            if(len(hilos_activos) > 1): 
-                printed += " , "
-            printed +=  "*"
+        if hilo.is_alive():
+            if not first:
+                printed += " | "
+            printed += "*"
             print("EL HILO ES: " + hilo.name)
+            first = False
 
     print(printed + " ]")
-
 
 
 def imprimirDatos(item1):
@@ -69,7 +68,6 @@ def imprimirDatos(item1):
     )    
 
 
-
 def borrarPantalla():
     if platform.system() == "Windows":
         os.system('cls')
@@ -77,7 +75,6 @@ def borrarPantalla():
         os.system('clear')
     else:
         print("\nSistema no reconocido, comando no ejecutado...\n")
-
 
 
 def checkParams(idle=True):
@@ -116,8 +113,16 @@ def checkParams(idle=True):
     return
 
 
-
-def endProgram(hilosActivos):
-    print("\nSaliendo del programa... \n")
-    sleep(2)
+def endProgram():
     borrarPantalla()
+
+
+def mostrar_error(mensaje):
+    print(f"\n[ERROR] {mensaje}\n")
+
+
+def mostrar_config(url, tags, notTags):
+    print("\nConfiguración cargada con éxito:")
+    print(f"URL: {url}")
+    print(f"Tags: {tags}")
+    print(f"Tags a ignorar: {notTags}")

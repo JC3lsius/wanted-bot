@@ -1,0 +1,8 @@
+requests
+psutil
+pyVinted
+python-telegram-bot
+beautifulsoup4
+selenium
+selenium-stealth
+webdriver_manager
