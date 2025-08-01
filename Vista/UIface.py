@@ -44,6 +44,7 @@ def mostrar_menu(hilos_activos=[]):
 def imprimirHilos(hilos_activos):
     printed = "[ "
     first = True
+    print("\n")
 
     for hilo in hilos_activos:
         if hilo.is_alive():
@@ -53,7 +54,7 @@ def imprimirHilos(hilos_activos):
             print("EL HILO ES: " + hilo.name)
             first = False
 
-    print(printed + " ]")
+    print(printed + " ]\n")
 
 
 def imprimirDatos(item1):
@@ -77,7 +78,7 @@ def borrarPantalla():
         print("\nSistema no reconocido, comando no ejecutado...\n")
 
 
-def checkParams(idle=True):
+def checkParams(idle=True, hilos_activos=[]):
 
     if platform.system() not in ["Windows", "Linux"]:
         print(f"Sistema {platform.system()} no compatible, puede que el programa no funcione correctamente...\n")
@@ -89,12 +90,13 @@ def checkParams(idle=True):
           f"\nDetalles del sistema: {platform.platform()}"
           f"\nVersion de Python: {sys.version}"
           f"\n\nUsuario actual: {os.getlogin()}"
-          f"\nID del proceso actual: {os.getpid()}"
-          f"\nID del proceso padre: {os.getppid()}"
-          f"\nUso de memoria: {psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024):.2f} MB"
+          f"\nNombre de la máquina: {platform.node()}"
           f"\n\nDirectorio actual: {os.getcwd()}"
           f"\nIPv6 Pública: {requests.get("https://api64.ipify.org?format=text").text}"
-          f"\nIPv4 Pública: {requests.get("https://api4.ipify.org?format=text").text}\n\n"
+          f"\nIPv4 Pública: {requests.get("https://api4.ipify.org?format=text").text}"
+          f"\n\nID del proceso actual: {os.getpid()}"
+          f"\nID del proceso padre: {os.getppid()}"
+          f"\nUso de memoria: {psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024):.2f} MB"
     )
 
     if(idle):
@@ -106,7 +108,7 @@ def checkParams(idle=True):
         )
         input()
     else:
-        print(f"Pulse INTRO para salir...\n")
+        print(f"\nPulse INTRO para salir...\n")
         input()
 
     borrarPantalla()

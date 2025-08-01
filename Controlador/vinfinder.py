@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-from pip._internal.utils import urls
 from time import sleep
 import threading
 import os
@@ -9,27 +7,34 @@ import Modelo.threads as threads
 
 class Vinfinder:
 
-    #  Constructor con parametros 
+
+    #  Constructor con parametros por defecto
     #  Estos parametros se pueden cambiar desde el archivo conf.txt
     def __init__(self):
+        self.url = None
         self.tags = []
         self.notTags = []
-        self.timeUrlParams = []
+        self.timeUrlParams = [15, 10]
         self.hilos_activos = []
         self.proxy = None
         self.proxies = []
         self.blacklist_proxies = []
         self.proxy_lock = threading.Lock() 
 
+
     #  Carga la configuración del archivo conf.txt que tiene que estar en la misma carpeta que el script
     #  Si no existe, se crea un archivo conf.txt con una configuración por defecto
     def loadConf(self):
+
         if not os.path.exists("conf"):
-            print("\nNo se encontró el archivo de configuración conf")
-            sleep(2)
+            print("\nNo se encontró el archivo de configuración conf.\n\nSino existe, cree un archivo conf.txt en la misma carpeta donde ejecutaste el script.\n")
+            sleep(1)
             return
 
         section = None
+        self.tags = []
+        self.notTags = []
+
         try:
             with open("conf", "r", encoding="utf-8") as archivo:
                 for linea in archivo:
@@ -91,7 +96,7 @@ class Vinfinder:
 
 
     def run(self):
-        
+
         monitor_thread = threading.Thread(target=threads.monitor, daemon=True, args=(self.hilos_activos,))
         monitor_thread.start()
 

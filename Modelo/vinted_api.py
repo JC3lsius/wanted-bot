@@ -1,12 +1,10 @@
 from asyncio import subprocess
 from dataclasses import dataclass
-import sys
 from typing import List
-from httpcore import ProxyError, TimeoutException
+from httpcore import ProxyError
 from httpx import ReadTimeout
 import requests
 import subprocess
-
 import re
 from Modelo.requester import Requester
 from bs4 import BeautifulSoup
@@ -19,8 +17,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
-import os
-from contextlib import contextmanager
 
 @dataclass
 class Item:
@@ -33,12 +29,15 @@ class Item:
     raw_timestamp: float
 
 class VintedAPI:
+
+
     def __init__(self, locale: str = "www.vinted.es"):
         self.api_endpoint = f"https://www.vinted.es/api/v2/catalog/items" #https://www.vinted.es/api/v2/catalog/items?search_text=pantalon
         #self.base_url = f"https://{locale}"
         self.base_url = f"{locale}"
         self.locale = locale
         self.search_number = 0
+
 
     # Busca artículos usando la API de Vinted
     def search_items_vinted_api(self, search_text: str, page: int = 1, per_page: int = 20, proxy: str = None) -> List[Item]:
@@ -50,7 +49,6 @@ class VintedAPI:
             self.client = Requester(self.locale)
 
         # FALTA, SI RECIBO UNA URL, EXTRAER PARAMETROS Y CREAR UNA REQUEST EN CONDICIONES, AÑADIR PARAMETROS SEGUN LA URL A LOS PARAMS
-
         params = {
             "search_text": "poster",
             "page": page,
@@ -59,7 +57,6 @@ class VintedAPI:
         }
 
         try:
-
             # Actualizamos el proxy del cliente si se proporciona
             if self.proxy:
                 proxies = {
@@ -92,9 +89,20 @@ class VintedAPI:
             print(f"[API] Error desconocido: {e}")
             return []
     
+        # Procesamos los items de la respuesta
+        items = self.format_items_api(data)
 
-        ### ESTA PARTE NO TENDRIA QUE SER MANEJADA POR LA API --> Procesamos los datos obtenidos
-        items = []
+        if len(items) > 0:
+            self.search_number += 1
+
+        duration = time.time() - start_time
+        print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
+
+        return items
+    
+
+    # Devuelve los items procesados de la búsqueda HTML
+    def format_items_api(self, items= [], data = None) -> List[Item]:
         for entry in data.get("items", []):
             items.append(Item(
                 id=str(entry.get("id")),
@@ -105,14 +113,14 @@ class VintedAPI:
                 url=f"https://www.vinted.es/items/{entry.get('id')}",
                 raw_timestamp=entry.get("created_at_ts", 0)
             ))
-
-        if len(items) > 0:
-            self.search_number += 1
-
-        duration = time.time() - start_time
-        print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
-
         return items
+
+
+    # Devuelve los items procesados de la búsqueda HTML
+    def url_to_params(self, url: str) -> dict:
+        params = {}
+        return params
+
 
     # Busca artículos scrapeando la página HTML de Vinted
     def search_items_vinted_html(self, search_url: str, page: int = 1, proxy: str = None) -> List[Item]:
@@ -140,20 +148,18 @@ class VintedAPI:
         if proxy:
             self.options.add_argument(f'--proxy-server={self.proxy}')
 
-        self.driver = webdriver.Chrome(service=self.service, options=self.options)
-        
+        # Inicializar el driver de Selenium
+        self.driver = webdriver.Chrome(service=self.service, options=self.options)     
         # Elemento de espera para que la página cargue completamente
         self.wait = WebDriverWait(self.driver, 10)
 
         try:
 
             print(f"[API] Cargando página: {search_url}")
-
+            # Obtener la página de búsqueda
             self.driver.get(search_url)
-
             # Esperar que carguen los items
             self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.feed-grid__item")))
-
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
@@ -164,8 +170,18 @@ class VintedAPI:
 
         self.driver.quit()
 
-        items = []
+        items = self.parse_items_html(soup)
 
+        if len(items) > 0:
+            self.search_number += 1
+
+        duration = time.time() - start_time
+        print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
+        return items
+    
+
+    # Devuelve los items procesados de la búsqueda HTML
+    def parse_items_html(self, items= [], soup = None) -> List[Item]:
         # Selector para cada elemento del grid
         for item_div in soup.select("div.feed-grid__item"):
             try:
@@ -223,13 +239,4 @@ class VintedAPI:
                 print(f"[API] Error procesando item: {e}")
                 continue
 
-        if len(items) > 0:
-            self.search_number += 1
-
-        duration = time.time() - start_time
-        print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
-        return items
-    
-    # Devuelve los items procesados de la búsqueda HTML
-    def parse_items_html(self, items= [], soup = None) -> List[Item]:
         return items
