@@ -54,19 +54,21 @@ def imprimirHilos(hilos_activos):
             print("EL HILO ES: " + hilo.name)
             first = False
 
-    print(printed + " ]\n")
+    print("\n" + printed + " ]\n")
 
 
-def imprimirDatos(item1):
-    print(
-        f"Nombre: {item1.title}\n"
-        f"id: {item1.id}\n"
-        f"Hora Item: {datetime.fromtimestamp(item1.raw_timestamp, tz=timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}\n"
-        f"Precio: {item1.price}\n"
-        f"Marca: {item1.brand_title}\n"
-        f"Foto: {item1.photo}\n"
-        f"Link: {item1.url}\n"
-    )    
+def imprimirDatos(items):
+
+    for item in items:
+        print(
+            f"Nombre: {item.title}\n"
+            f"id: {item.id}\n"
+            f"Hora Item: {datetime.fromtimestamp(item.raw_timestamp, tz=timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}\n"
+            f"Precio: {item.price}€\n"
+            f"Marca: {item.brand_title}\n"
+            f"Foto: {item.photo}\n"
+            f"Link: {item.url}\n"
+        )    
 
 
 def borrarPantalla():
@@ -92,8 +94,7 @@ def checkParams(idle=True, hilos_activos=[]):
           f"\n\nUsuario actual: {os.getlogin()}"
           f"\nNombre de la máquina: {platform.node()}"
           f"\n\nDirectorio actual: {os.getcwd()}"
-          f"\nIPv6 Pública: {requests.get("https://api64.ipify.org?format=text").text}"
-          f"\nIPv4 Pública: {requests.get("https://api4.ipify.org?format=text").text}"
+          f"\nIPv4 Pública: {requests.get('https://api4.ipify.org?format=text').text}"
           f"\n\nID del proceso actual: {os.getpid()}"
           f"\nID del proceso padre: {os.getppid()}"
           f"\nUso de memoria: {psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024):.2f} MB"

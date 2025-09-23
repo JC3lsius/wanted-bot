@@ -1,11 +1,15 @@
+from Modelo.vinted_api import VintedAPI
+from requests.auth import HTTPProxyAuth
+from Vista.UIface import imprimirDatos
 from datetime import datetime
-import random
 from time import sleep
-import threading
+
 import concurrent
+import threading
 import requests
 import telegram
-from Modelo.vinted_api import VintedAPI
+import random
+import time
 
 # Credenciales del BOT de Telegram
 TELEGRAM_BOT_TOKEN = ""
@@ -20,7 +24,7 @@ TELEGRAM_CHAT_ID = ""
 # <-> Obtiene un proxy funcional revisado de una lista de proxies
 #     Si no hay proxies en la lista, busca proxies gratuitos y los prueba.
 
-def get_working_proxy(proxies= [], blackList_proxies= [], test_url="https://www.vinted.es", stop_event=None, proxy_lock=None):
+def get_working_proxy(proxies= [], blackList_proxies= [], test_url="https://www.vinted.es", stop_event=None, proxy_lock=None, sleep_time=10):
 
     good_proxies_finded = 0
 
@@ -40,17 +44,37 @@ def get_working_proxy(proxies= [], blackList_proxies= [], test_url="https://www.
                     print("[PROXY] Tamaño de blacklist: ", len(blackList_proxies))
 
         print("[PROXY] Ha finalizado la busqueda de proxies.")
+        sleep(sleep_time)
 
 
 # <-> Obtiene proxies de varios sitios web sin comprobar su funcionalidad
 
-def get_free_proxies(stop_event):
-    url = "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=elite"
-    response = requests.get(url)
-    raw_proxies = response.text.strip().split("\n")
-    proxies = [f"http://{proxy.strip()}" for proxy in raw_proxies if proxy.strip()]
-    print(f"\n[PROXY] Proxies Proxyscrape obtenidos: {len(proxies)}")
-    return proxies
+def get_free_proxies(stop_event=None):
+    all_proxies = set()
+
+    sources = {
+        "proxyscrape.com": "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=elite",
+        "FreeProxyList.net": "https://free-proxy-list.net/",
+    }
+
+    for name, url in sources.items():
+        try:
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                lines = resp.text.strip().splitlines()
+                for line in lines:
+                    line = line.strip()
+                    # Simple heurística: IP:PUERTO
+                    if line and ":" in line and all(c.isdigit() or c == "." or c == ":" for c in line):
+                        all_proxies.add(f"http://{line}")
+                #print(f"[PROXY] {name}: {len(lines)} líneas leídas.")
+            else:
+                print(f"[PROXY] Error {resp.status_code} desde {name}")
+        except Exception as e:
+            print(f"[PROXY] Falló conexión a {name}: {e}")
+
+    print(f"\n[PROXY] Total únicos recogidos: {len(all_proxies)}")
+    return list(all_proxies)
 
 
 # <-> Prueba un proxy para ver si es funcional
@@ -76,11 +100,22 @@ def test_proxy(proxy, test_url="https://www.vinted.es", stop_event=None):
 
         test_url = "https://www.vinted.es"
 
+        # Soporte para proxies con auth
+        if "@" in proxy:
+            creds, ip_port = proxy.split("@")
+            proxy_url = "http://" + ip_port
+            user, pwd = creds.split(":")
+            auth = HTTPProxyAuth(user, pwd)
+        else:
+            proxy_url = proxy if proxy.startswith("http") else "http://" + proxy
+            auth = None
+
         response = requests.get(
             test_url,
-            proxies={"http": proxy, "https": proxy},
+            proxies={"http": proxy_url, "https": proxy_url},
             headers=headers,
             timeout=15,
+            auth=auth
         )
 
         #print(f"[{thread_name}] Probando proxy: {proxy} - Status: {response.status_code}")
@@ -88,6 +123,7 @@ def test_proxy(proxy, test_url="https://www.vinted.es", stop_event=None):
         if response.status_code == 200:
             return proxy
         else:
+            #print(f"\n[{thread_name}] ❌ Proxy inválido ({response.status_code}): {proxy}")
             return False
 
     except requests.exceptions.ProxyError:
@@ -143,16 +179,19 @@ def comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags):
 # <-> Inicia la búsqueda de artículos en Vinted
 #     Se encarga de buscar artículos y comprobar si cumplen con los criterios establecidos.
 
-def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=[], proxyType=None, proxies=None, blacklist_proxies=None, stop_event=None, type="API"):
+def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=[], proxyType=None, proxies=None, blacklist_proxies=None, stop_event=None, type="API", time_proxy_wait=5):
 
-    vinted = VintedAPI(linkName)
+    vinted = VintedAPI(linkName, type)
     print(f"TIPO DE PROXY: {proxyType}")
     proxy_golden_list = []
-    proxy = None
+
+    if proxyType and proxyType != "AUTOMATIC":
+        vinted = VintedAPI(linkName, type, proxy=proxyType)
 
     while not stop_event.is_set():
 
         # Asignar un proxy si es necesario
+        proxy = None
         if(proxyType == "AUTOMATIC"):
             while True:
                 print(f"\n[SEARCH] Buscando proxy...")
@@ -161,17 +200,20 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
                     print(f"\n[SEARCH] Proxy Obtenido de la lista: {proxy}")
                     break
                 if not proxy:
-                    sleep(1)
-        elif proxyType:
-            proxy = proxyType
+                    sleep(time_proxy_wait)
         
         # Busqueda de artículos y comprobación de items
+        vinted.search_number = 0
         errors = 0
+        
         for i in range(50):
 
+            timer = time.time()
             if  type == "API":
+                print(f"\n[SEARCH] Buscando articulos en la API...")
                 items = vinted.search_items_vinted_api(linkName, page=1, proxy=proxy)
             else:
+                print(f"\n[SEARCH] Buscando articulos en el HTML...")
                 items = vinted.search_items_vinted_html(linkName, page=1, proxy=proxy)
 
             if len(items) == 0:
@@ -183,11 +225,15 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
             else:
                 errors = 0
                 print(f"[SEARCH] Artículos encontrados: {len(items)}")
-
+                #imprimirDatos(items)
                 # for itemcheck in items:
                 #     comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
 
-                sleep(timeWait/4)
+                duration = time.time() - timer
+                print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")
+                
+                if duration < timeWait:
+                    time.sleep(timeWait - duration)
 
 
 #----------------------#
@@ -198,7 +244,7 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
 # ---> Hilo de búsqueda de artículos
 #       Este hilo se encarga de buscar artículos en Vinted y comprobar si cumplen con los criterios establecidos.
 
-def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blacklist_proxies=None, proxy_lock=None, thread_limit=3):
+def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blacklist_proxies=None, proxy_lock=None, thread_limit=3, search="API"):
 
     if hilos_activos >= thread_limit:
         print("\nLimite de hilos alcanzado, volviendo...\n")
@@ -207,9 +253,9 @@ def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blac
 
     stop_event = threading.Event()
     hilo = threading.Thread(
-        name="hilo_search",
+        name="hilo_search -" + str(hilos_activos) + "-",
         target=startBusqueda,
-        args=(params[2], params[0], params[1], [], notTags, tags, proxy, proxies, blacklist_proxies, stop_event)
+        args=(params[2], params[0], params[1], [], notTags, tags, proxy, proxies, blacklist_proxies, stop_event, search)
     )
     hilo.start()
 

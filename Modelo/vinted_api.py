@@ -1,22 +1,26 @@
-from asyncio import subprocess
-from dataclasses import dataclass
-from typing import List
-from httpcore import ProxyError
-from httpx import ReadTimeout
-import requests
-import subprocess
-import re
-from Modelo.requester import Requester
-from bs4 import BeautifulSoup
-from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium import webdriver
+
+from Modelo.requester import Requester
+from dataclasses import dataclass
+from httpcore import ProxyError
+from asyncio import subprocess
+from httpx import ReadTimeout
 from bs4 import BeautifulSoup
+from typing import List
+
+import subprocess
+import requests
 import time
+import re
+
+
 
 @dataclass
 class Item:
@@ -31,22 +35,53 @@ class Item:
 class VintedAPI:
 
 
-    def __init__(self, locale: str = "www.vinted.es"):
-        self.api_endpoint = f"https://www.vinted.es/api/v2/catalog/items" #https://www.vinted.es/api/v2/catalog/items?search_text=pantalon
-        #self.base_url = f"https://{locale}"
-        self.base_url = f"{locale}"
+    def __init__(self, locale: str = "www.vinted.es", type_search: str = "API", proxy: str = None):
+        self.api_endpoint = f"http://www.vinted.es/api/v2/catalog/items" 
+        self.base_url = f"{locale}" #self.base_url = f"https://{locale}"
         self.locale = locale
         self.search_number = 0
+        self.proxy = proxy
+
+        if type_search == "API":
+            self.client = Requester(self.locale)
+        else:
+            self.chromedriver_path = ChromeDriverManager().install()
+            self.service = Service(executable_path=self.chromedriver_path, log_path="nul")
+            self.service.creationflags = subprocess.CREATE_NO_WINDOW
+            self.configure_selenium(proxy)
 
 
-    # Busca artículos usando la API de Vinted
+
+    # <-> Configuracion de parametros para la busqueda de Selenium, mejora de rendimiento y errores
+    #
+
+    def configure_selenium(self, proxy: str = None):
+
+        self.options = Options()
+        self.options.add_argument("--headless=new")
+        self.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
+        self.options.add_argument("--disable-blink-features=AutomationControlled")
+        #self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        #self.options.add_experimental_option('useAutomationExtension', False)
+        self.options.add_argument("--use-gl=swiftshader")
+        self.options.add_argument("--enable-unsafe-swiftshader")
+        self.options.add_argument("--disable-dev-shm-usage")
+        self.options.add_argument("--disable-gpu")
+        self.options.add_argument("--no-sandbox")
+        self.options.add_argument("--disable-extensions")
+        self.options.add_argument("--disable-infobars")
+
+        print(f"[API] Proxy: {proxy}")
+        if proxy:
+            self.options.add_argument(f'--proxy-server={proxy}')
+
+
+    # <-> Busca artículos usando la API de Vinted
+    #     Devuelve una lista de objetos Item que contienen la información de los artículos.
+
     def search_items_vinted_api(self, search_text: str, page: int = 1, per_page: int = 20, proxy: str = None) -> List[Item]:
 
-        start_time = time.time()
-
-        if self.search_number == 0:
-            self.proxy = proxy
-            self.client = Requester(self.locale)
+        #start_time = time.time()
 
         # FALTA, SI RECIBO UNA URL, EXTRAER PARAMETROS Y CREAR UNA REQUEST EN CONDICIONES, AÑADIR PARAMETROS SEGUN LA URL A LOS PARAMS
         params = {
@@ -60,21 +95,41 @@ class VintedAPI:
             # Actualizamos el proxy del cliente si se proporciona
             if self.proxy:
                 proxies = {
+                    "http": self.proxy,
+                    "https": self.proxy
+                }
+                self.client.set_proxy(proxies=proxies)
+            elif proxy:
+                print("[API] El proxy elegido es:", proxy)
+                proxies = {
                     "http": proxy,
                     "https": proxy
-                } if proxy else None
+                }
                 self.client.set_proxy(proxies=proxies)
-
             # Realizamos la solicitud a la API
             response = self.client.get(self.api_endpoint, params=params)
 
-            print(f"[API] Request URL: {response.url}")
-            print(f"[API] Response text: {response.text[:500]}")
-            if not response or response.status_code != 200:
+            #print(f"[API] Request URL: {response.url}")
+            #print(f"[API] Response text: {response.text[:50000]}")
+
+            if not response:
+                print("[ERROR] No response received.")
+                return []
+
+            if "Enable JavaScript and cookies" in response.text:
+                print("[ERROR] Cloudflare block detected.")
+                return []
+            
+            if response.status_code != 200:
                 print(f"[API] Error en la API: {response.status_code if response else 'No response'}")
                 return []
 
-            data = response.json()
+            try:
+                data = response.json()
+                # Procesar data["items"] y convertir a objetos Item
+            except Exception as e:
+                print(f"[ERROR] Could not parse response as JSON: {e}")
+                return []
 
         except ReadTimeout:
             print(f"[API] Timeout al acceder a {self.api_endpoint} con proxy: {proxy}")
@@ -90,19 +145,20 @@ class VintedAPI:
             return []
     
         # Procesamos los items de la respuesta
-        items = self.format_items_api(data)
+        items = self.format_items_api(data, items=[])
 
         if len(items) > 0:
             self.search_number += 1
 
-        duration = time.time() - start_time
-        print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
+        #duration = time.time() - start_time
+        #print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
 
         return items
-    
 
-    # Devuelve los items procesados de la búsqueda HTML
-    def format_items_api(self, items= [], data = None) -> List[Item]:
+
+    # <-> Devuelve los items procesados de la búsqueda HTML
+
+    def format_items_api(self, data, items= []) -> List[Item]:
         for entry in data.get("items", []):
             items.append(Item(
                 id=str(entry.get("id")),
@@ -116,40 +172,22 @@ class VintedAPI:
         return items
 
 
-    # Devuelve los items procesados de la búsqueda HTML
+    # <-> FALTA COMPLETAR Obtiene los parámetros de la URL y los devuelve en un diccionario
+
     def url_to_params(self, url: str) -> dict:
         params = {}
         return params
 
 
-    # Busca artículos scrapeando la página HTML de Vinted
+    # <-> Busca artículos scrapeando la página HTML de Vinted
+    #     Devuelve una lista de objetos Item que contienen la información de los artículos.
+
     def search_items_vinted_html(self, search_url: str, page: int = 1, proxy: str = None) -> List[Item]:
-
-        if self.search_number == 0:
-            self.proxy= proxy
-            self.chromedriver_path = ChromeDriverManager().install()
-            self.service = Service(executable_path=self.chromedriver_path, log_path="nul")
-            self.service.creationflags = subprocess.CREATE_NO_WINDOW
-
 
         start_time = time.time()
 
-        self.options = Options()
-        self.options.add_argument("--headless")
-        self.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
-        #self.options.add_argument("--disable-blink-features=AutomationControlled")
-        #self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        #self.options.add_experimental_option('useAutomationExtension', False)
-        self.options.add_argument("--enable-unsafe-swiftshader") 
-        self.options.add_argument("--disable-gpu")
-        self.options.add_argument("--no-sandbox")
-
-
-        if proxy:
-            self.options.add_argument(f'--proxy-server={self.proxy}')
-
         # Inicializar el driver de Selenium
-        self.driver = webdriver.Chrome(service=self.service, options=self.options)     
+        self.driver = webdriver.Chrome(service=self.service, options=self.options)
         # Elemento de espera para que la página cargue completamente
         self.wait = WebDriverWait(self.driver, 10)
 
@@ -170,7 +208,8 @@ class VintedAPI:
 
         self.driver.quit()
 
-        items = self.parse_items_html(soup)
+        # Procesar los items de la página HTML, se puede limitar el número de items procesados
+        items = self.parse_items_html(soup, items=[])
 
         if len(items) > 0:
             self.search_number += 1
@@ -178,12 +217,19 @@ class VintedAPI:
         duration = time.time() - start_time
         print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
         return items
-    
 
-    # Devuelve los items procesados de la búsqueda HTML
-    def parse_items_html(self, items= [], soup = None) -> List[Item]:
+
+    # <-> Devuelve los items procesados de la búsqueda HTML
+    #     Procesa el HTML de los items y devuelve una lista de objetos Item
+    #     Utiliza selectores CSS para extraer la información de cada item.
+    
+    def parse_items_html(self, soup, items= [], num_items=50) -> List[Item]:
         # Selector para cada elemento del grid
         for item_div in soup.select("div.feed-grid__item"):
+
+            if len(items) >= num_items:
+                break
+    
             try:
                 # URL del producto
                 link_tag = item_div.select_one("a.new-item-box__overlay")

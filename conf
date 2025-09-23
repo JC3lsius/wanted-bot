@@ -1,5 +1,5 @@
 URL:
-https://www.vinted.es/catalog?search_text=poster&order=newest_first
+http://www.vinted.es/catalog?search_text=poster&order=newest_first
 
 Tags: 
 nintendo
@@ -21,3 +21,6 @@ Time Params:
 10
 
 Proxy:
+
+Search:
+HTML

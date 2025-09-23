@@ -1,7 +1,7 @@
 RECOMENDACIONES DE SEGURIDAD
   1. NO usar este programa con fines comerciales o con intenciones que vayan en contra de las politicas de Vinted
-  2. REVISAR EL CONTENIDO de el archivo .conf
-  3. Para más privacidad y seguridad, usar una VPN antes de ejecutar el programa aunque afecte en el tiempo de respuesta.
+  2. REVISAR EL CONTENIDO de el archivo .conf antes de ejecutar el programa
+  3. Para más privacidad y seguridad, usar una VPN antes de ejecutar el programa, aunque afecte en el tiempo de respuesta...
 
 Antes de ejecutar el programa, asegurarse de instalar todas las librerias del archivo requirements.txt con el
 siguiente comando: py -m pip install -r requirements.txt
@@ -10,7 +10,7 @@ Luego introducir en la terminal: py main.py
 
 ## Estructura general
 
-La aplicación sigue el patrón **Modelo-Vista-Controlador (MVC)** para organizar el código y facilitar el mantenimiento.
+La aplicación sigue una "adaptación" del patrón **Modelo-Vista-Controlador (MVC)** para organizar el código y facilitar el mantenimiento.
 
 ---
 
@@ -80,5 +80,3 @@ Usuario <-> Vista (UIface) <-> Controlador (VinFinderApp) <-> Modelo (VintedAPI,
 ```
 
 ---
-
-**Esta estructura facilita la extensión, el mantenimiento y la comprensión del código.**

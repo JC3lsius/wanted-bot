@@ -1,15 +1,14 @@
 from time import sleep
+
+import Modelo.threads as threads
+import Vista.UIface as UIface
 import threading
 import os
 import re
-import Vista.UIface as UIface
-import Modelo.threads as threads
 
 class Vinfinder:
 
 
-    #  Constructor con parametros por defecto
-    #  Estos parametros se pueden cambiar desde el archivo conf.txt
     def __init__(self):
         self.url = None
         self.tags = []
@@ -20,10 +19,13 @@ class Vinfinder:
         self.proxies = []
         self.blacklist_proxies = []
         self.proxy_lock = threading.Lock() 
+        self.thread_limit = 30
+        self.search = "API"
 
+    
+    # <-> Carga la configuración del archivo conf.txt que tiene que estar en la misma carpeta que el script
+    #     Si no existe, se crea un archivo conf.txt con una configuración por defecto
 
-    #  Carga la configuración del archivo conf.txt que tiene que estar en la misma carpeta que el script
-    #  Si no existe, se crea un archivo conf.txt con una configuración por defecto
     def loadConf(self):
 
         if not os.path.exists("conf"):
@@ -78,6 +80,7 @@ class Vinfinder:
                         self.proxy = linea.strip()
                     elif section == "search":
                         self.search = linea.strip()
+                        
         except PermissionError:
             print("Error: No tienes permisos para leer el archivo.")
         except UnicodeDecodeError:
@@ -91,9 +94,14 @@ class Vinfinder:
         print(f"Tags a ignorar: {self.notTags}")
         print(f"Time Params: {self.timeUrlParams}")
         print(f"Proxy: {self.proxy}")
+        print(f"Search: {self.search}")
         print("\n\nEspere 1 segundo...")
         sleep(1)
 
+
+    # <-> Inicia la búsqueda de artículos en Vinted
+    #     Se encarga de iniciar el hilo de búsqueda y el hilo de búsqueda de proxies
+    #     Si se ha definido un proxy, lo utiliza para la búsqueda de artículos.
 
     def run(self):
 
@@ -131,8 +139,11 @@ class Vinfinder:
                     len(self.hilos_activos),
                     self.proxies, 
                     self.blacklist_proxies,
-                    self.proxy_lock
+                    self.proxy_lock,
+                    self.thread_limit,
+                    self.search
                 )
+                self.hilos_activos.append(hilo)
                 if(self.proxy == "AUTOMATIC"):
                     # Hilo de búsqueda de proxies
                     hilo_proxy = threads.proxyfinder(self.proxies, 
@@ -140,7 +151,6 @@ class Vinfinder:
                     self.proxy_lock)
                     self.hilos_activos.append(hilo_proxy)
 
-                self.hilos_activos.append(hilo)
             elif option == "4":
                 UIface.endProgram()
                 return
@@ -148,3 +158,4 @@ class Vinfinder:
                 UIface.mostrar_error("Opción no válida. Por favor, intente de nuevo.")
                 sleep(1)
             #UIface.borrarPantalla()
+            
