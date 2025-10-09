@@ -8,6 +8,7 @@ import concurrent
 import threading
 import requests
 import telegram
+import asyncio
 import random
 import time
 
@@ -146,8 +147,9 @@ async def send_notification(item):
 
     # Enviar la notificación a Telegram
     bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
-    await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=img_file, caption="Persona detectada.")
-    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= item.title + "\n\n" + item.url)
+    await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=item.photo, caption="Persona detectada.")
+    #await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= item.title + "\n\n" + item.url)
+    #await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= "Funciona" + "\n\n")
     print("Notificación enviada a través de Telegram.")
 
 
@@ -225,9 +227,12 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
             else:
                 errors = 0
                 print(f"[SEARCH] Artículos encontrados: {len(items)}")
-                #imprimirDatos(items)
-                # for itemcheck in items:
-                #     comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
+                imprimirDatos(items)
+                asyncio.run(send_notification(items[0]))
+
+                #for itemcheck in items:
+                #   comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
+                    #imprimirDatos(itemcheck)
 
                 duration = time.time() - timer
                 print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")
@@ -281,7 +286,7 @@ def proxyfinder(proxies=[], blacklist_proxies=[], linkName="https://www.vinted.e
 # ---> Monitor de hilos activos
 #       Este hilo se encarga de monitorizar los hilos activos y eliminar los que ya no están vivos.
 
-def monitor(hilos_activos, check_interval=1):
+def monitor(hilos_activos, check_interval=3):
 
     while True:
         for hilo in hilos_activos:

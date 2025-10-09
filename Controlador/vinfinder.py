@@ -123,7 +123,7 @@ class Vinfinder:
                     UIface.mostrar_error("No se pudo cargar la configuración.")
             elif option == "3":
                 if not self.url:
-                    url_input = input("Introduce la URL de búsqueda de Vinted (debe contener '?'): ").strip()
+                    url_input = input("Introduce la URL de búsqueda (debe contener '?'): ").strip()
                     if "?" not in url_input:
                         sleep(1)
                         UIface.mostrar_error("La URL de búsqueda no contiene parámetros. Revisa la URL introducida.")
@@ -154,6 +154,13 @@ class Vinfinder:
             elif option == "4":
                 UIface.endProgram()
                 return
+            
+            elif option == "kill":
+                    pid_input = input("Introduce la URL de búsqueda (debe contener '?'): ").strip()
+                    if "?" not in url_input:
+                        sleep(1)
+                        UIface.mostrar_error("La URL de búsqueda no contiene parámetros. Revisa la URL introducida.")
+                        continue
             else:
                 UIface.mostrar_error("Opción no válida. Por favor, intente de nuevo.")
                 sleep(1)

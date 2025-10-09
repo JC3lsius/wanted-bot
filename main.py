@@ -19,6 +19,7 @@ if __name__ == "__main__":
 #     Si hay un hilo corriendo (el programa) pedir que se cierre, y opciones de segundo plano
 # SI  Control de errores de hilo
 # SI  Modelo Vista Controlador
+#     Añadir funcionalidad para scrapear y hacer llamadas a la API de wallapop
 
 #   recomendaciones
 # --------------------
@@ -27,3 +28,4 @@ if __name__ == "__main__":
 
 # FALTA, SI RECIBO UNA URL, EXTRAER PARAMETROS Y CREAR UNA REQUEST EN CONDICIONES, AÑADIR PARAMETROS SEGUN LA URL A LOS PARAMS
 # SE PUEDEN CREAR VARIOS HILOS DE CADA TIPO, PERO LOS HILOS DE PROXY NO SE PUEDEN SOLAPAR AL BUSCAR, QUE TENGAN ACCESOS CONTROLADOS A RECURSOS, IGUAL QUE LOS DE BUSQUEDA
+# CREAR VARIOS HILOS CON DIFERENTES PARÁMETROS, ELEGIR QUE HOJA DE PARÁMETROS CARGAR PARA CADA HILO

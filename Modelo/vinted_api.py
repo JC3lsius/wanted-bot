@@ -71,6 +71,9 @@ class VintedAPI:
         self.options.add_argument("--disable-extensions")
         self.options.add_argument("--disable-infobars")
 
+        self.options.add_argument("--log-level=3")
+        #self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
         print(f"[API] Proxy: {proxy}")
         if proxy:
             self.options.add_argument(f'--proxy-server={proxy}')
