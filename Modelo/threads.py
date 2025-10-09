@@ -13,8 +13,8 @@ import random
 import time
 
 # Credenciales del BOT de Telegram
-TELEGRAM_BOT_TOKEN = "7858665096:AAGPlaGpjN5ZfmFvjG0g6oyHaVWj_uFXKoA"
-TELEGRAM_CHAT_ID = "843250757"
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_CHAT_ID = ""
 
 
 #------------------------#
