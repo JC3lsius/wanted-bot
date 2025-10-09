@@ -27,6 +27,7 @@ class Item:
     id: str
     title: str
     price: str
+    description: str
     brand_title: str
     photo: str
     url: str
@@ -226,13 +227,13 @@ class VintedAPI:
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
     
-    def parse_items_html(self, soup, items= [], num_items=50) -> List[Item]:
+    def parse_items_html(self, soup, items=[], num_items=50) -> List[Item]:
         # Selector para cada elemento del grid
         for item_div in soup.select("div.feed-grid__item"):
 
             if len(items) >= num_items:
                 break
-    
+
             try:
                 # URL del producto
                 link_tag = item_div.select_one("a.new-item-box__overlay")
@@ -254,10 +255,6 @@ class VintedAPI:
                 title_tag = item_div.select_one("[data-testid$='--description-title']")
                 title = title_tag.get_text(strip=True) if title_tag else "Sin título"
 
-                # Estado (opcional, si quieres)
-                # condition_tag = item_div.select_one("[data-testid$='--description-subtitle']")
-                # condition = condition_tag.get_text(strip=True) if condition_tag else ""
-
                 # Precio principal
                 price_tag = item_div.select_one("[data-testid$='--price-text']")
                 price = price_tag.get_text(strip=True) if price_tag else "?"
@@ -274,10 +271,13 @@ class VintedAPI:
                 img_tag = item_div.select_one("img.web_ui__Image__content")
                 photo = img_tag["src"] if img_tag and "src" in img_tag.attrs else ""
 
+                # Añadir el item a la lista
                 items.append(Item(
                     id=item_id,
                     title=title,
                     price=price,
+                    description ="",
+                    #description = self.fetch_item_description(url),
                     brand_title="",  # No disponible en el HTML proporcionado
                     photo=photo,
                     url=url,
@@ -289,3 +289,25 @@ class VintedAPI:
                 continue
 
         return items
+
+    # <-> Obtiene la descripción de un item de una url y lo añade a un item
+    #     Reduce la velocidad del programa pero mejora la precisión en el filtrado de items      
+
+    def fetch_item_description(self, url):
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0"
+            }
+            resp = requests.get(url, headers=headers)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+
+            # Selector CSS de la descripción
+            desc_tag = soup.select_one("span.web_ui__Text__text.web_ui__Text__body.web_ui__Text__left.web_ui__Text__format")
+            if desc_tag:
+                # .get_text(strip=True) elimina espacios iniciales/finales
+                return desc_tag.get_text(separator="\n", strip=True)
+            return ""
+        except Exception as e:
+            print(f"Error obteniendo descripción de {url}: {e}")
+            return ""

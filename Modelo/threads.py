@@ -13,8 +13,8 @@ import random
 import time
 
 # Credenciales del BOT de Telegram
-TELEGRAM_BOT_TOKEN = ""
-TELEGRAM_CHAT_ID = ""
+TELEGRAM_BOT_TOKEN = "7858665096:AAGPlaGpjN5ZfmFvjG0g6oyHaVWj_uFXKoA"
+TELEGRAM_CHAT_ID = "843250757"
 
 
 #------------------------#
@@ -148,7 +148,7 @@ async def send_notification(item):
     # Enviar la notificación a Telegram
     bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
     await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=item.photo, caption="Persona detectada.")
-    #await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= item.title + "\n\n" + item.url)
+    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= item.title + "\n\n" + item.url)
     #await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= "Funciona" + "\n\n")
     print("Notificación enviada a través de Telegram.")
 
@@ -164,15 +164,17 @@ async def send_notification(item):
 def comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags):
 
     name = str(itemcheck.title).lower()
+    #description = str(itemcheck.description).lower()
     resultado = (datetime.now().replace(microsecond=0) - datetime.fromtimestamp(itemcheck.raw_timestamp)).total_seconds()
 
     # Parametros para tener en cuenta el articulo
     if (resultado < timeLimit
     and itemcheck.url not in urls
     and any(word in name for word in tags)
+    and any(word in name for word in tags)
     and not any(worde in name for worde in noTags)
     ):
-        send_notification(itemcheck)
+        asyncio.run(send_notification(itemcheck))
         urls.append(itemcheck.url)
 
     #sleep(timeWait)
@@ -228,11 +230,10 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
                 errors = 0
                 print(f"[SEARCH] Artículos encontrados: {len(items)}")
                 imprimirDatos(items)
-                asyncio.run(send_notification(items[0]))
 
-                #for itemcheck in items:
-                #   comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
-                    #imprimirDatos(itemcheck)
+                for itemcheck in items:
+                    comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
+
 
                 duration = time.time() - timer
                 print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")

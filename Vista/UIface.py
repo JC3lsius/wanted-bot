@@ -68,6 +68,7 @@ def imprimirDatos(items):
             f"Marca: {item.brand_title}\n"
             f"Foto: {item.photo}\n"
             f"Link: {item.url}\n"
+            f"Descripcion: {item.description}\n"
         )    
 
 
