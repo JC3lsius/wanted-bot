@@ -52,7 +52,6 @@ class VintedAPI:
             self.configure_selenium(proxy)
 
 
-
     # <-> Configuracion de parametros para la busqueda de Selenium, mejora de rendimiento y errores
     #
 
@@ -183,10 +182,10 @@ class VintedAPI:
         return params
 
 
-    # <-> Busca artículos scrapeando la página HTML de Vinted
+    # <-> Busca artículos scrapeando la página HTML de Vinted, Wallapop, Ebay o Milanuncios
     #     Devuelve una lista de objetos Item que contienen la información de los artículos.
 
-    def search_items_vinted_html(self, search_url: str, page: int = 1, proxy: str = None) -> List[Item]:
+    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 0) -> List[Item]:
 
         start_time = time.time()
 
@@ -201,7 +200,10 @@ class VintedAPI:
             # Obtener la página de búsqueda
             self.driver.get(search_url)
             # Esperar que carguen los items
-            self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.feed-grid__item")))
+            if type == 0:
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.feed-grid__item")))
+            if type == 1:
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.ItemCardList__item")))
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
@@ -213,13 +215,17 @@ class VintedAPI:
         self.driver.quit()
 
         # Procesar los items de la página HTML, se puede limitar el número de items procesados
-        items = self.parse_items_html(soup, items=[])
+        if type == 0:
+            items = self.parse_items_vinted_html(soup, items=[])
+        elif type == 1:
+            items = self.parse_items_wallapop_html(soup, items=[])
+
 
         if len(items) > 0:
             self.search_number += 1
 
         duration = time.time() - start_time
-        print(f"[API] search_items_vinted_api duró {duration:.2f} segundos")
+        print(f"[API] search_items_api duró {duration:.2f} segundos")
         return items
 
 
@@ -227,7 +233,7 @@ class VintedAPI:
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
     
-    def parse_items_html(self, soup, items=[], num_items=50) -> List[Item]:
+    def parse_items_vinted_html(self, soup, items=[], num_items=50) -> List[Item]:
         # Selector para cada elemento del grid
         for item_div in soup.select("div.feed-grid__item"):
 
@@ -290,13 +296,17 @@ class VintedAPI:
 
         return items
 
-    # <-> Obtiene la descripción de un item de una url y lo añade a un item
+    # <-> Obtiene la descripción de un item de Vinted de una url y lo añade a un item
     #     Reduce la velocidad del programa pero mejora la precisión en el filtrado de items      
 
     def fetch_item_description(self, url):
         try:
             headers = {
-                "User-Agent": "Mozilla/5.0"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                "Accept": "application/json",
+                "Referer": "https://www.vinted.es/",
+                "Connection": "keep-alive",
+                "Host": "www.vinted.es",
             }
             resp = requests.get(url, headers=headers)
             resp.raise_for_status()
@@ -311,3 +321,17 @@ class VintedAPI:
         except Exception as e:
             print(f"Error obteniendo descripción de {url}: {e}")
             return ""
+        
+    # <-> Busca artículos scrapeando la página HTML de Wallapop
+    #     Devuelve una lista de objetos Item que contienen la información de los artículos.
+
+    def parse_items_wallapop_html(self, soup, items = []) -> List[Item]:
+        for card in soup.select("a.ItemCardList__item"):
+            title = card.select_one(".ItemCard__title").get_text(strip=True) if card.select_one(".ItemCard__title") else ""
+            price = card.select_one(".ItemCard__price").get_text(strip=True) if card.select_one(".ItemCard__price") else ""
+            link = "https://www.wallapop.com" + card["href"]
+            image = card.select_one("img")["src"] if card.select_one("img") else ""
+
+            items.append(Item(title=title, price=price, link=link, image=image))
+        return items
+

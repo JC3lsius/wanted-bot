@@ -147,8 +147,7 @@ async def send_notification(item):
 
     # Enviar la notificación a Telegram
     bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
-    await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=item.photo, caption="Persona detectada.")
-    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= item.title + "\n\n" + item.url)
+    await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=item.photo, caption= item.title + "\n\n" + item.url)
     #await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text= "Funciona" + "\n\n")
     print("Notificación enviada a través de Telegram.")
 
@@ -218,7 +217,7 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
                 items = vinted.search_items_vinted_api(linkName, page=1, proxy=proxy)
             else:
                 print(f"\n[SEARCH] Buscando articulos en el HTML...")
-                items = vinted.search_items_vinted_html(linkName, page=1, proxy=proxy)
+                items = vinted.search_items_html(linkName, page=1, proxy=proxy)
 
             if len(items) == 0:
                 errors += 1

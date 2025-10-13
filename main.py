@@ -11,7 +11,6 @@ if __name__ == "__main__":
 
 #   consideraciones extra
 # -------------------
-#     Si la lista de articulos encontrados llega a 100, se borran las primeras 20 urls de referencia del listado
 # SI  Hacer menu y interfaz al iniciar la busqueda que se interrumpa al introducir comando
 #     Deteccion de errores y contador de fallos
 #     Cambio de los parametros de busqueda
@@ -20,6 +19,7 @@ if __name__ == "__main__":
 # SI  Control de errores de hilo
 # SI  Modelo Vista Controlador
 #     Añadir funcionalidad para scrapear y hacer llamadas a la API de wallapop
+#     Crear configuraciones de uso de la aplicación, siendo unas más eficientes que otras (modo scrapping, modo analisis, modo normal)
 
 #   recomendaciones
 # --------------------
