@@ -64,7 +64,7 @@ def imprimirDatos(items):
             f"Nombre: {item.title}\n"
             f"id: {item.id}\n"
             f"Hora Item: {datetime.fromtimestamp(item.raw_timestamp, tz=timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}\n"
-            f"Precio: {item.price}€\n"
+            f"Precio: {item.price}\n"
             f"Marca: {item.brand_title}\n"
             f"Foto: {item.photo}\n"
             f"Link: {item.url}\n"

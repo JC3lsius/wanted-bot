@@ -184,7 +184,7 @@ class VintedAPI:
     # <-> Busca artículos scrapeando la página HTML de Vinted, Wallapop, Ebay o Milanuncios
     #     Devuelve una lista de objetos Item que contienen la información de los artículos.
 
-    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 1) -> List[Item]:
+    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 2) -> List[Item]:
 
         start_time = time.time()
 
@@ -198,13 +198,21 @@ class VintedAPI:
             print(f"[API] Cargando página: {search_url}")
             # Obtener la página de búsqueda
             self.driver.get(search_url)
+
             # Esperar que carguen los items
+            # Vinted
             if type == 0:
                 self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.feed-grid__item")))
-            if type == 1:
-                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[class*='item-card_ItemCard--vertical']")
-    )
-)
+            # Wallapop
+            elif type == 1:
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[class*='item-card_ItemCard--vertical']")))
+            # Ebay
+            elif type == 2:
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.srp-results > li.s-card")))
+            # Milanuncios
+            else:
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.srp-results > li.s-card")))
+
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
@@ -220,7 +228,8 @@ class VintedAPI:
             items = self.parse_items_vinted_html(soup, items=[])
         elif type == 1:
             items = self.parse_items_wallapop_html(soup, items=[])
-
+        elif type == 2:
+            items = self.parse_items_ebay_html(soup, items=[])
 
         if len(items) > 0:
             self.search_number += 1
@@ -384,15 +393,46 @@ class VintedAPI:
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
     
-    def parse_items_ebay_html(self, soup, items = []) -> List[Item]:
-        for card in soup.select("a.ItemCardList__item"):
-            title = card.select_one(".ItemCard__title").get_text(strip=True) if card.select_one(".ItemCard__title") else ""
-            price = card.select_one(".ItemCard__price").get_text(strip=True) if card.select_one(".ItemCard__price") else ""
-            link = "https://www.wallapop.com" + card["href"]
-            image = card.select_one("img")["src"] if card.select_one("img") else ""
+    def parse_items_ebay_html(self, soup, items=[]) -> list[Item]:
+        # Buscar el contenedor padre
+        items_ul = soup.select_one("ul.srp-results")
+        if not items_ul:
+            return items
 
-            items.append(Item(title=title, 
-                              price=price, 
-                              link=link, 
-                              image=image))
+        # Iterar sobre cada item <li> en eBay
+        for li in items_ul.select("li.s-card"):
+            # Título
+            title_tag = li.select_one(".s-card__title span")
+            title = title_tag.get_text(strip=True) if title_tag else "Sin título"
+
+            # Precio
+            price_tag = li.select_one(".s-card__price")
+            price = price_tag.get_text(strip=True) if price_tag else "?"
+
+            # URL del item
+            link_tag = li.select_one("a.image-treatment, a.s-card__link")
+            link = link_tag["href"] if link_tag else ""
+            if link and not link.startswith("http"):
+                link = "https://www.ebay.es" + link
+
+            # Imagen
+            img_tag = li.select_one("img.s-card__image")
+            image = img_tag["src"] if img_tag else ""
+
+            # Vendedor
+            seller_tag = li.select_one(".su-card-container__attributes__secondary .s-card__attribute-row span.primary")
+            seller = seller_tag.get_text(strip=True) if seller_tag else ""
+
+            # Añadir el item a la lista
+            items.append(Item(
+                id="item_id",
+                title=title,
+                price=price,
+                description ="",
+                brand_title="",
+                photo=image,
+                url=link,
+                raw_timestamp=int(time.time())
+            ))
+
         return items
