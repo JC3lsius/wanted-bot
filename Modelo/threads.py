@@ -230,8 +230,8 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
                 print(f"[SEARCH] Artículos encontrados: {len(items)}")
                 imprimirDatos(items)
 
-                for itemcheck in items:
-                    comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
+                #for itemcheck in items:
+                    #comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
 
 
                 duration = time.time() - timer

@@ -35,7 +35,6 @@ class Item:
 
 class VintedAPI:
 
-
     def __init__(self, locale: str = "www.vinted.es", type_search: str = "API", proxy: str = None):
         self.api_endpoint = f"http://www.vinted.es/api/v2/catalog/items" 
         self.base_url = f"{locale}" #self.base_url = f"https://{locale}"
@@ -185,7 +184,7 @@ class VintedAPI:
     # <-> Busca artículos scrapeando la página HTML de Vinted, Wallapop, Ebay o Milanuncios
     #     Devuelve una lista de objetos Item que contienen la información de los artículos.
 
-    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 0) -> List[Item]:
+    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 1) -> List[Item]:
 
         start_time = time.time()
 
@@ -203,7 +202,9 @@ class VintedAPI:
             if type == 0:
                 self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.feed-grid__item")))
             if type == 1:
-                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.ItemCardList__item")))
+                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[class*='item-card_ItemCard--vertical']")
+    )
+)
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
@@ -229,7 +230,7 @@ class VintedAPI:
         return items
 
 
-    # <-> Devuelve los items procesados de la búsqueda HTML
+    # <-> Devuelve los items procesados de la búsqueda HTML de Vinted
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
     
@@ -321,17 +322,77 @@ class VintedAPI:
         except Exception as e:
             print(f"Error obteniendo descripción de {url}: {e}")
             return ""
-        
-    # <-> Busca artículos scrapeando la página HTML de Wallapop
-    #     Devuelve una lista de objetos Item que contienen la información de los artículos.
+
+    # NO IMPLEMENTADO       
+    # <-> Devuelve los items procesados de la búsqueda HTML de Wallapop
+    #     Procesa el HTML de los items y devuelve una lista de objetos Item
+    #     Utiliza selectores CSS para extraer la información de cada item.
 
     def parse_items_wallapop_html(self, soup, items = []) -> List[Item]:
+        for item_div in soup.select("a[class*='item-card_ItemCard--vertical']"):
+            # título
+            title_tag = item_div.select_one("h3.item-card_ItemCard__title__5TocV")
+            title = title_tag.get_text(strip=True) if title_tag else "Sin título"
+
+            # precio
+            price_tag = item_div.select_one("strong.item-card_ItemCard__price__pVpdc")
+            price = price_tag.get_text(strip=True) if price_tag else "?"
+
+            # imagen
+            img_tag = item_div.select_one("img.item-card-images-slider_ItemCardImagesSlider__image__9JlAd")
+            photo = img_tag["src"] if img_tag else ""
+
+            # url
+            url = item_div["href"]
+            if not url.startswith("http"):
+                url = "https://es.wallapop.com" + url
+            
+            # Añadir el item a la lista
+            items.append(Item(
+                id="item_id",
+                title=title,
+                price=price,
+                description ="",
+                brand_title="",
+                photo=photo,
+                url=url,
+                raw_timestamp=int(time.time())
+            ))
+            
+        return items
+    
+    # NO IMPLEMENTADO
+    # <-> Devuelve los items procesados de la búsqueda HTML de Milanuncios
+    #     Procesa el HTML de los items y devuelve una lista de objetos Item
+    #     Utiliza selectores CSS para extraer la información de cada item.
+    
+    def parse_items_milanuncios_html(self, soup, items = []) -> List[Item]:
         for card in soup.select("a.ItemCardList__item"):
             title = card.select_one(".ItemCard__title").get_text(strip=True) if card.select_one(".ItemCard__title") else ""
             price = card.select_one(".ItemCard__price").get_text(strip=True) if card.select_one(".ItemCard__price") else ""
             link = "https://www.wallapop.com" + card["href"]
             image = card.select_one("img")["src"] if card.select_one("img") else ""
 
-            items.append(Item(title=title, price=price, link=link, image=image))
+            items.append(Item(title=title, 
+                              price=price, 
+                              link=link, 
+                              image=image))
         return items
 
+    # NO IMPLEMENTADO
+    # <-> Devuelve los items procesados de la búsqueda HTML de Ebay
+    #     Procesa el HTML de los items y devuelve una lista de objetos Item
+    #     Utiliza selectores CSS para extraer la información de cada item.
+    
+    def parse_items_ebay_html(self, soup, items = []) -> List[Item]:
+        for card in soup.select("a.ItemCardList__item"):
+            title = card.select_one(".ItemCard__title").get_text(strip=True) if card.select_one(".ItemCard__title") else ""
+            price = card.select_one(".ItemCard__price").get_text(strip=True) if card.select_one(".ItemCard__price") else ""
+            link = "https://www.wallapop.com" + card["href"]
+            image = card.select_one("img")["src"] if card.select_one("img") else ""
+
+            items.append(Item(title=title, 
+                              price=price, 
+                              link=link, 
+                              image=image))
+        return items
