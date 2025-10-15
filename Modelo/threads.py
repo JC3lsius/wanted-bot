@@ -182,14 +182,14 @@ def comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags):
 # <-> Inicia la búsqueda de artículos en Vinted
 #     Se encarga de buscar artículos y comprobar si cumplen con los criterios establecidos.
 
-def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=[], proxyType=None, proxies=None, blacklist_proxies=None, stop_event=None, type="API", time_proxy_wait=5):
+def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=[], proxyType=None, proxies=None, blacklist_proxies=None, stop_event=None, typeSearch="API", time_proxy_wait=5, typeApp=None):
 
-    vinted = VintedAPI(linkName, type)
+    vinted = VintedAPI(linkName, typeSearch)
     print(f"TIPO DE PROXY: {proxyType}")
     proxy_golden_list = []
 
     if proxyType and proxyType != "AUTOMATIC":
-        vinted = VintedAPI(linkName, type, proxy=proxyType)
+        vinted = VintedAPI(linkName, typeSearch, proxy=proxyType)
 
     while not stop_event.is_set():
 
@@ -217,7 +217,7 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
                 items = vinted.search_items_vinted_api(linkName, page=1, proxy=proxy)
             else:
                 print(f"\n[SEARCH] Buscando articulos en el HTML...")
-                items = vinted.search_items_html(linkName, page=1, proxy=proxy)
+                items = vinted.search_items_html(linkName, page=1, proxy=proxy, typeApp=typeApp)
 
             if len(items) == 0:
                 errors += 1
@@ -249,7 +249,7 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
 # ---> Hilo de búsqueda de artículos
 #       Este hilo se encarga de buscar artículos en Vinted y comprobar si cumplen con los criterios establecidos.
 
-def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blacklist_proxies=None, proxy_lock=None, thread_limit=3, search="API"):
+def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blacklist_proxies=None, proxy_lock=None, thread_limit=3, search="API", typeApp=None):
 
     if hilos_activos >= thread_limit:
         print("\nLimite de hilos alcanzado, volviendo...\n")
@@ -257,10 +257,11 @@ def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blac
         return None
 
     stop_event = threading.Event()
+    
     hilo = threading.Thread(
         name="hilo_search -" + str(hilos_activos) + "-",
         target=startBusqueda,
-        args=(params[2], params[0], params[1], [], notTags, tags, proxy, proxies, blacklist_proxies, stop_event, search)
+        args=(params[2], params[0], params[1], [], notTags, tags, proxy, proxies, blacklist_proxies, stop_event, search, 5, typeApp)
     )
     hilo.start()
 

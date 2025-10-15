@@ -184,7 +184,7 @@ class VintedAPI:
     # <-> Busca artículos scrapeando la página HTML de Vinted, Wallapop, Ebay o Milanuncios
     #     Devuelve una lista de objetos Item que contienen la información de los artículos.
 
-    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 3) -> List[Item]:
+    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 2, typeApp: str = None) -> List[Item]:
 
         start_time = time.time()
 
@@ -200,28 +200,23 @@ class VintedAPI:
             self.driver.get(search_url)
 
             # Esperar que carguen los items
-            # Vinted
-            if type == 0:
+            if typeApp == "vinted":
                 self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.feed-grid__item")))
-            # Wallapop
-            elif type == 1:
+            elif typeApp == "wallapop":
                 self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[class*='item-card_ItemCard--vertical']")))
-            # Ebay
-            elif type == 2:
+            elif typeApp == "ebay":
                 self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.srp-results > li.s-card")))
-            # Milanuncios
-            else:
+            elif typeApp == "milanuncios":
                 #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ma-AdList > article.ma-AdCardV2")))
                 #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article")))
-                
 
                 #self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.ma-AdList")))
                 # Esperar hasta que los artículos individuales estén cargados
                 #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article.ma-AdCardV2")))
                 
-                
-                self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='AD_LIST']"))
-)
+                self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='AD_LIST']")))
+            else:
+                return
 
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
@@ -234,11 +229,11 @@ class VintedAPI:
         self.driver.quit()
 
         # Procesar los items de la página HTML, se puede limitar el número de items procesados
-        if type == 0:
+        if typeApp == "vinted":
             items = self.parse_items_vinted_html(soup, items=[])
-        elif type == 1:
+        elif typeApp == "wallapop":
             items = self.parse_items_wallapop_html(soup, items=[])
-        elif type == 2:
+        elif typeApp == "ebay":
             items = self.parse_items_ebay_html(soup, items=[])
         else:
             items = self.parse_items_milanuncios_html(soup, items=[])

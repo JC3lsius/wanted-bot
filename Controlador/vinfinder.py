@@ -27,23 +27,56 @@ class Vinfinder:
 
     def loadConf(self):
 
-        if not os.path.exists("conf"):
-            print("\nNo se encontró el archivo de configuración conf.\n\nSino existe, cree un archivo conf.txt en la misma carpeta donde ejecutaste el script.\n")
+        # Buscar si existe algún archivo con "conf" en el nombre en el directorio actual
+        if not any("conf" in f for f in os.listdir(".")):
+            print("\nNo se encontró ningún archivo de configuración que contenga 'conf' en el nombre.\n")
+            print("Si no existe, crea un archivo 'conf.txt' en la misma carpeta donde ejecutaste el script.\n")
             sleep(1)
             return
+        
+        conf_files = [f for f in os.listdir(".") if "conf" in f]
+        print("Se han encontrado estos archivos de configuración:\n")
+        for i, f in enumerate(conf_files, start=1):
+            print(f"{i}.- {f}")
+        print()
+
+        # Pedir al usuario que introduzca el numero correspondiente al archivo que quiere usar
+        while True:
+            user_input = input("Introduce el numero del archivo que quieres usar (Enter para salir): ").strip()
+            
+            if user_input == "":
+                print("No se seleccionó ningún archivo. Saliendo...")
+                sleep(1)
+                return
+            
+            if user_input.isdigit():
+                index = int(user_input) - 1
+                if 0 <= index < len(conf_files):
+                    user_input = conf_files[index]
+                    print(f"Has seleccionado: {user_input}")
+                    break
+                else:
+                    print("Número fuera de rango. Intenta de nuevo.\n")
+            else:
+                print("Entrada no válida. Introduce un número.\n")
 
         section = None
         self.tags = []
         self.notTags = []
+        self.typeApp = None
 
         try:
-            with open("conf", "r", encoding="utf-8") as archivo:
+            with open(user_input, "r", encoding="utf-8") as archivo:
                 for linea in archivo:
                     linea = linea.strip()
 
                     # Detectar secciones
                     if linea.startswith("http"):
                         self.url = linea
+                        for sitio in ["wallapop", "vinted", "ebay", "milanuncios"]:
+                            if sitio in linea:
+                                self.typeApp = sitio
+                                break
                         continue
                     elif linea.startswith("Tags:"):
                         section = "tags"
@@ -123,9 +156,10 @@ class Vinfinder:
             elif option == "3":
                 if not self.url:
                     url_input = input("Introduce la URL de búsqueda (debe contener '?'): ").strip()
-                    if "?" not in url_input:
+                    # Se puede mejorar
+                    if not ("?" in url_input and ("http" in url_input or "https" in url_input)):
+                        UIface.mostrar_error("La URL de búsqueda es incorrecta. Revisa la URL introducida.")
                         sleep(1)
-                        UIface.mostrar_error("La URL de búsqueda no contiene parámetros. Revisa la URL introducida.")
                         continue
                     else:
                         self.url = url_input
@@ -140,7 +174,8 @@ class Vinfinder:
                     self.blacklist_proxies,
                     self.proxy_lock,
                     self.thread_limit,
-                    self.search
+                    self.search,
+                    self.typeApp
                 )
                 self.hilos_activos.append(hilo)
                 if(self.proxy == "AUTOMATIC"):
