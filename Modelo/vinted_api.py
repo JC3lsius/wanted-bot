@@ -184,14 +184,14 @@ class VintedAPI:
     # <-> Busca artículos scrapeando la página HTML de Vinted, Wallapop, Ebay o Milanuncios
     #     Devuelve una lista de objetos Item que contienen la información de los artículos.
 
-    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 2) -> List[Item]:
+    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 3) -> List[Item]:
 
         start_time = time.time()
 
         # Inicializar el driver de Selenium
         self.driver = webdriver.Chrome(service=self.service, options=self.options)
         # Elemento de espera para que la página cargue completamente
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, 20)
 
         try:
 
@@ -211,7 +211,17 @@ class VintedAPI:
                 self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.srp-results > li.s-card")))
             # Milanuncios
             else:
-                self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.srp-results > li.s-card")))
+                #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.ma-AdList > article.ma-AdCardV2")))
+                #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article")))
+                
+
+                #self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.ma-AdList")))
+                # Esperar hasta que los artículos individuales estén cargados
+                #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article.ma-AdCardV2")))
+                
+                
+                self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='AD_LIST']"))
+)
 
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
@@ -230,6 +240,8 @@ class VintedAPI:
             items = self.parse_items_wallapop_html(soup, items=[])
         elif type == 2:
             items = self.parse_items_ebay_html(soup, items=[])
+        else:
+            items = self.parse_items_milanuncios_html(soup, items=[])
 
         if len(items) > 0:
             self.search_number += 1
@@ -331,8 +343,7 @@ class VintedAPI:
         except Exception as e:
             print(f"Error obteniendo descripción de {url}: {e}")
             return ""
-
-    # NO IMPLEMENTADO       
+  
     # <-> Devuelve los items procesados de la búsqueda HTML de Wallapop
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
@@ -370,25 +381,6 @@ class VintedAPI:
             
         return items
     
-    # NO IMPLEMENTADO
-    # <-> Devuelve los items procesados de la búsqueda HTML de Milanuncios
-    #     Procesa el HTML de los items y devuelve una lista de objetos Item
-    #     Utiliza selectores CSS para extraer la información de cada item.
-    
-    def parse_items_milanuncios_html(self, soup, items = []) -> List[Item]:
-        for card in soup.select("a.ItemCardList__item"):
-            title = card.select_one(".ItemCard__title").get_text(strip=True) if card.select_one(".ItemCard__title") else ""
-            price = card.select_one(".ItemCard__price").get_text(strip=True) if card.select_one(".ItemCard__price") else ""
-            link = "https://www.wallapop.com" + card["href"]
-            image = card.select_one("img")["src"] if card.select_one("img") else ""
-
-            items.append(Item(title=title, 
-                              price=price, 
-                              link=link, 
-                              image=image))
-        return items
-
-    # NO IMPLEMENTADO
     # <-> Devuelve los items procesados de la búsqueda HTML de Ebay
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
@@ -432,6 +424,48 @@ class VintedAPI:
                 brand_title="",
                 photo=image,
                 url=link,
+                raw_timestamp=int(time.time())
+            ))
+
+        return items
+
+    # NO IMPLEMENTADO
+    # <-> Devuelve los items procesados de la búsqueda HTML de Milanuncios
+    #     Procesa el HTML de los items y devuelve una lista de objetos Item
+    #     Utiliza selectores CSS para extraer la información de cada item.
+    
+    def parse_items_milanuncios_html(self, soup, items = []) -> List[Item]:
+        # Contenedor padre
+        ad_list = soup.select_one("div.ma-AdList")
+        if not ad_list:
+            return items
+
+        # Iterar sobre cada artículo
+        for article in ad_list.select("article.ma-AdCardV2"):
+            # URL
+            link_tag = article.select_one("a.ma-AdCardV2-link")
+            url = link_tag["href"] if link_tag else ""
+
+            # Imagen
+            img_tag = article.select_one("img.ma-AdCardV2-photo")
+            photo = img_tag["src"] if img_tag else ""
+
+            # Título
+            title = img_tag["title"] if img_tag and "title" in img_tag.attrs else "Sin título"
+
+            # Precio
+            price_tag = article.select_one(".ma-AdCardV2-headerListing")  # Ajustar según donde aparezca el precio
+            price = price_tag.get_text(strip=True) if price_tag else "?"
+
+            # Añadir el item a la lista
+            items.append(Item(
+                id="item_id",
+                title=title,
+                price=price,
+                description ="",
+                brand_title="",
+                photo=photo,
+                url=url,
                 raw_timestamp=int(time.time())
             ))
 
