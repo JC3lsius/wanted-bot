@@ -1,4 +1,4 @@
-from Modelo.vinted_api import VintedAPI
+from Modelo.wanted_api import WantedAPI
 from requests.auth import HTTPProxyAuth
 from Vista.UIface import imprimirDatos
 from datetime import datetime
@@ -13,8 +13,8 @@ import random
 import time
 
 # Credenciales del BOT de Telegram
-TELEGRAM_BOT_TOKEN = "7858665096:AAGPlaGpjN5ZfmFvjG0g6oyHaVWj_uFXKoA"
-TELEGRAM_CHAT_ID = "843250757"
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_CHAT_ID = ""
 
 
 #------------------------#
@@ -184,12 +184,12 @@ def comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags):
 
 def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=[], proxyType=None, proxies=None, blacklist_proxies=None, stop_event=None, typeSearch="API", time_proxy_wait=5, typeApp=None):
 
-    vinted = VintedAPI(linkName, typeSearch)
+    wanted = WantedAPI(linkName, typeSearch)
     print(f"TIPO DE PROXY: {proxyType}")
     proxy_golden_list = []
 
     if proxyType and proxyType != "AUTOMATIC":
-        vinted = VintedAPI(linkName, typeSearch, proxy=proxyType)
+        wanted = WantedAPI(linkName, typeSearch, proxy=proxyType)
 
     while not stop_event.is_set():
 
@@ -206,39 +206,39 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
                     sleep(time_proxy_wait)
         
         # Busqueda de artículos y comprobación de items
-        vinted.search_number = 0
+        wanted.search_number = 0
         errors = 0
         
-        for i in range(50):
+        #for i in range(50):
 
-            timer = time.time()
-            if  type == "API":
-                print(f"\n[SEARCH] Buscando articulos en la API...")
-                items = vinted.search_items_vinted_api(linkName, page=1, proxy=proxy)
-            else:
-                print(f"\n[SEARCH] Buscando articulos en el HTML...")
-                items = vinted.search_items_html(linkName, page=1, proxy=proxy, typeApp=typeApp)
+        timer = time.time()
+        if  type == "API":
+            print(f"\n[SEARCH] Buscando articulos en la API...")
+            items = wanted.search_items_vinted_api(linkName, page=1, proxy=proxy)
+        else:
+            print(f"\n[SEARCH] Buscando articulos en el HTML...")
+            items = wanted.search_items_html(linkName, page=1, proxy=proxy, typeApp=typeApp)
 
-            if len(items) == 0:
-                errors += 1
-                if errors >= 6:
-                    blacklist_proxies.append(proxy)
-                    print("[THREAD] No se encontraron artículos, cambiando de proxy...")
-                    break
-            else:
-                errors = 0
-                print(f"[SEARCH] Artículos encontrados: {len(items)}")
-                imprimirDatos(items)
+        if len(items) == 0:
+            errors += 1
+            if errors >= 6:
+                blacklist_proxies.append(proxy)
+                print("[THREAD] No se encontraron artículos, cambiando de proxy...")
+                break
+        else:
+            errors = 0
+            print(f"[SEARCH] Artículos encontrados: {len(items)}")
+            imprimirDatos(items)
 
-                #for itemcheck in items:
-                    #comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
+            #for itemcheck in items:
+                #comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
 
 
-                duration = time.time() - timer
-                print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")
-                
-                if duration < timeWait:
-                    time.sleep(timeWait - duration)
+            duration = time.time() - timer
+            print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")
+            
+            if duration < timeWait:
+                time.sleep(timeWait - duration)
 
 
 #----------------------#
@@ -265,7 +265,7 @@ def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blac
     )
     hilo.start()
 
-    return hilo
+    return hilo, stop_event
 
 
 # ---> Hilo de búsqueda de proxies
@@ -288,10 +288,19 @@ def proxyfinder(proxies=[], blacklist_proxies=[], linkName="https://www.vinted.e
 #       Este hilo se encarga de monitorizar los hilos activos y eliminar los que ya no están vivos.
 
 def monitor(hilos_activos, check_interval=3):
-
     while True:
-        for hilo in hilos_activos:
-            if not hilo.is_alive():         
-                print(f"⚠️ ALERTA: {hilo} ha dejado de funcionar.")
-                hilos_activos.remove(hilo)
+        # Creamos una lista temporal para eliminar después (evita modificar mientras se itera)
+        hilos_a_eliminar = []
+
+        for nombre, info in hilos_activos.items():
+            hilo = info["thread"]
+
+            if not hilo.is_alive():
+                print(f"⚠️ ALERTA: {nombre} ha dejado de funcionar.")
+                hilos_a_eliminar.append(nombre)
+
+        # Eliminamos fuera del bucle principal
+        for nombre in hilos_a_eliminar:
+            del hilos_activos[nombre]
+
         sleep(check_interval)

@@ -25,7 +25,7 @@ La aplicación sigue una "adaptación" del patrón **Modelo-Vista-Controlador (M
 
 ---
 
-### 2. **VintedAPI** (`Modelo/vinted_api.py`)
+### 2. **wanted_api** (`Modelo/vinted_api.py`)
 - **Función:**  
   Encapsula la lógica de acceso a la API de Vinted.  
   Permite buscar artículos usando URLs de búsqueda y devuelve objetos `Item` con los datos relevantes.
@@ -35,12 +35,12 @@ La aplicación sigue una "adaptación" del patrón **Modelo-Vista-Controlador (M
 
 ---
 
-### 3. **VinFinderApp** (`Controlador/vinfinder.py`)
+### 3. **wanted** (`Controlador/wanted.py`)
 - **Función:**  
   Es el controlador principal de la aplicación.  
   Gestiona la configuración, el menú de usuario, la coordinación de hilos y la interacción entre modelo y vista.
 - **Complemento:**  
-  Llama a los métodos del modelo (`threads`, `VintedAPI`) y de la vista (`UIface`) según las acciones del usuario.
+  Llama a los métodos del modelo (`threads`, `wanted_api`) y de la vista (`UIface`) según las acciones del usuario.
 
 ---
 

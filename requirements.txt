@@ -6,3 +6,5 @@ beautifulsoup4
 selenium
 selenium-stealth
 webdriver_manager
+undetected_chromedriver
+setuptools

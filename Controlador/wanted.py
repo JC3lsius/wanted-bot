@@ -6,24 +6,28 @@ import threading
 import os
 import re
 
-class Vinfinder:
+class Wanted:
 
     def __init__(self):
+
+        self.restartComponents()
+        self.hilos_activos = {}
+        self.blacklist_proxies = []
+        self.proxy_lock = threading.Lock() 
+        self.thread_limit = 30
+
+    
+    def restartComponents(self):
         self.url = None
         self.tags = []
         self.notTags = []
         self.timeUrlParams = [15, 10]
-        self.hilos_activos = []
         self.proxy = None
         self.proxies = []
-        self.blacklist_proxies = []
-        self.proxy_lock = threading.Lock() 
-        self.thread_limit = 30
-        self.search = "API"
+        self.search = "HTML"
+        self.typeApp = None
 
-    
     # <-> Carga la configuración del archivo conf.txt que tiene que estar en la misma carpeta que el script
-    #     Si no existe, se crea un archivo conf.txt con una configuración por defecto
 
     def loadConf(self):
 
@@ -31,7 +35,7 @@ class Vinfinder:
         if not any("conf" in f for f in os.listdir(".")):
             print("\nNo se encontró ningún archivo de configuración que contenga 'conf' en el nombre.\n")
             print("Si no existe, crea un archivo 'conf.txt' en la misma carpeta donde ejecutaste el script.\n")
-            sleep(1)
+            sleep(3)
             return
         
         conf_files = [f for f in os.listdir(".") if "conf" in f]
@@ -60,10 +64,8 @@ class Vinfinder:
             else:
                 print("Entrada no válida. Introduce un número.\n")
 
-        section = None
-        self.tags = []
-        self.notTags = []
-        self.typeApp = None
+        self.restartComponents()
+        section = ""
 
         try:
             with open(user_input, "r", encoding="utf-8") as archivo:
@@ -164,7 +166,7 @@ class Vinfinder:
                     else:
                         self.url = url_input
                 # Hilo de búsqueda
-                hilo = threads.searchThread(
+                hilo, stop_event = threads.searchThread(
                     [self.timeUrlParams[0], self.timeUrlParams[1], self.url],
                     self.tags,
                     self.notTags,
@@ -177,7 +179,8 @@ class Vinfinder:
                     self.search,
                     self.typeApp
                 )
-                self.hilos_activos.append(hilo)
+
+                self.hilos_activos[hilo.name] = {"thread": hilo, "stop": stop_event}
                 if(self.proxy == "AUTOMATIC"):
                     # Hilo de búsqueda de proxies
                     hilo_proxy = threads.proxyfinder(self.proxies, 
@@ -186,15 +189,41 @@ class Vinfinder:
                     self.hilos_activos.append(hilo_proxy)
 
             elif option == "4":
+
+                if self.hilos_activos == {}:
+                    UIface.mostrar_error("No hay hilos activos para detener.")
+                    sleep(1)
+                    continue
+
+                UIface.imprimirHilos(self.hilos_activos)
+                nombre = input("Introduce el nombre del hilo a detener (por ejemplo, hilo_search -0-): ").strip()
+                
+                if nombre not in self.hilos_activos:
+                    UIface.mostrar_error(f"No existe el hilo '{nombre}'.")
+                    continue
+
+                print(f"[SYS] Deteniendo {nombre}...")
+
+                hilo_info = self.hilos_activos[nombre]
+                hilo_info["stop"].set()
+                hilo_info["thread"].join(timeout=5)
+
+                if hilo.is_alive():
+                    UIface.mostrar_error("[MAIN] ⚠️ El hilo no terminó a tiempo y sigue activo, reintentando 1 vez más...")
+                    hilo_info["stop"].set()
+                    hilo_info["thread"].join(timeout=15)
+                    
+                    if hilo.is_alive():
+                        UIface.mostrar_error("[MAIN] ❌ El hilo sigue activo después del segundo intento. Es posible que no se haya detenido correctamente.")
+                        continue
+
+                print(f"[SYS] {nombre} detenido.")
+                del self.hilos_activos[nombre]
+
+            elif option == "5":
                 UIface.endProgram()
                 return
             
-            elif option == "kill":
-                    pid_input = input("Introduce la URL de búsqueda (debe contener '?'): ").strip()
-                    if "?" not in url_input:
-                        sleep(1)
-                        UIface.mostrar_error("La URL de búsqueda no contiene parámetros. Revisa la URL introducida.")
-                        continue
             else:
                 UIface.mostrar_error("Opción no válida. Por favor, intente de nuevo.")
                 sleep(1)

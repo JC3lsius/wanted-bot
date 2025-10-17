@@ -36,7 +36,8 @@ def mostrar_menu(hilos_activos=[]):
         f"1. Ver información del Programa y del Sistema\n"
         f"2. Cargar configuración\n"
         f"3. Iniciar\n"
-        f"4. Salir\n"
+        f"4. Finalizar un proceso\n"
+        f"5. Salir\n"
     )
     return input("Seleccione una opción: ")
 
@@ -46,12 +47,12 @@ def imprimirHilos(hilos_activos):
     first = True
     print("\n")
 
-    for hilo in hilos_activos:
+    for info in hilos_activos.values():
+        hilo = info["thread"]
         if hilo.is_alive():
             if not first:
                 printed += " | "
-            printed += "*"
-            print("EL HILO ES: " + hilo.name)
+            printed += hilo.name
             first = False
 
     print("\n" + printed + " ]\n")

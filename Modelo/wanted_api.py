@@ -15,11 +15,11 @@ from httpx import ReadTimeout
 from bs4 import BeautifulSoup
 from typing import List
 
+import undetected_chromedriver as uc
 import subprocess
 import requests
 import time
 import re
-
 
 
 @dataclass
@@ -33,7 +33,7 @@ class Item:
     url: str
     raw_timestamp: float
 
-class VintedAPI:
+class WantedAPI:
 
     def __init__(self, locale: str = "www.vinted.es", type_search: str = "API", proxy: str = None):
         self.api_endpoint = f"http://www.vinted.es/api/v2/catalog/items" 
@@ -62,13 +62,15 @@ class VintedAPI:
         self.options.add_argument("--disable-blink-features=AutomationControlled")
         #self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
         #self.options.add_experimental_option('useAutomationExtension', False)
-        self.options.add_argument("--use-gl=swiftshader")
+        #self.options.add_argument("--use-gl=swiftshader")
         self.options.add_argument("--enable-unsafe-swiftshader")
         self.options.add_argument("--disable-dev-shm-usage")
         self.options.add_argument("--disable-gpu")
         self.options.add_argument("--no-sandbox")
         self.options.add_argument("--disable-extensions")
         self.options.add_argument("--disable-infobars")
+        self.options.add_argument("--disable-software-rasterizer")
+        self.options.add_argument("--disable-webgl")
 
         self.options.add_argument("--log-level=3")
         #self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -184,12 +186,14 @@ class VintedAPI:
     # <-> Busca artículos scrapeando la página HTML de Vinted, Wallapop, Ebay o Milanuncios
     #     Devuelve una lista de objetos Item que contienen la información de los artículos.
 
-    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, type: int = 2, typeApp: str = None) -> List[Item]:
+    def search_items_html(self, search_url: str, page: int = 1, proxy: str = None, typeApp: str = None) -> List[Item]:
 
         start_time = time.time()
 
         # Inicializar el driver de Selenium
         self.driver = webdriver.Chrome(service=self.service, options=self.options)
+        
+        #self.driver = uc.Chrome(service=self.service, options=self.options)
         # Elemento de espera para que la página cargue completamente
         self.wait = WebDriverWait(self.driver, 20)
 
@@ -214,9 +218,20 @@ class VintedAPI:
                 # Esperar hasta que los artículos individuales estén cargados
                 #self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article.ma-AdCardV2")))
                 
-                self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='AD_LIST']")))
-            else:
-                return
+                #self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid='AD_LIST']")))
+                try:
+                    self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article.ma-AdCardV2")))
+                except Exception:
+                    # Intentar de nuevo con selectores alternativos (por si cambia el DOM)
+                    try:
+                        self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "article[class*='ma-AdCardV2']")))
+                    except Exception:
+                        print("[API] ⚠️ No se encontraron artículos de Milanuncios en el tiempo esperado.")
+                        # Capturar HTML de depuración
+                        html = self.driver.page_source
+                        with open("milanuncios_debug.html", "w", encoding="utf-8") as f:
+                            f.write(html)
+                        raise
 
             # Extrae el contenido de la página obtenida
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
@@ -228,15 +243,21 @@ class VintedAPI:
 
         self.driver.quit()
 
-        # Procesar los items de la página HTML, se puede limitar el número de items procesados
-        if typeApp == "vinted":
-            items = self.parse_items_vinted_html(soup, items=[])
-        elif typeApp == "wallapop":
-            items = self.parse_items_wallapop_html(soup, items=[])
-        elif typeApp == "ebay":
-            items = self.parse_items_ebay_html(soup, items=[])
-        else:
-            items = self.parse_items_milanuncios_html(soup, items=[])
+        try:
+            # Procesar los items de la página HTML, se puede limitar el número de items procesados
+            if typeApp == "vinted":
+                items = self.parse_items_vinted_html(soup, items=[])
+            elif typeApp == "wallapop":
+                items = self.parse_items_wallapop_html(soup, items=[])
+            elif typeApp == "ebay":
+                items = self.parse_items_ebay_html(soup, items=[])
+            elif typeApp == "milanuncios":
+                items = self.parse_items_milanuncios_html(soup, items=[])
+
+        except Exception as e:
+            print(f"[API] Error el el parseo del html: {type(e).__name__}: {e}")
+            self.driver.quit()
+            return []
 
         if len(items) > 0:
             self.search_number += 1
@@ -301,7 +322,7 @@ class VintedAPI:
                     price=price,
                     description ="",
                     #description = self.fetch_item_description(url),
-                    brand_title="",  # No disponible en el HTML proporcionado
+                    brand_title="",
                     photo=photo,
                     url=url,
                     raw_timestamp=int(time.time())
@@ -429,39 +450,61 @@ class VintedAPI:
     #     Procesa el HTML de los items y devuelve una lista de objetos Item
     #     Utiliza selectores CSS para extraer la información de cada item.
     
-    def parse_items_milanuncios_html(self, soup, items = []) -> List[Item]:
+    def parse_items_milanuncios_html(self, soup, items=[]) -> List[Item]:
         # Contenedor padre
         ad_list = soup.select_one("div.ma-AdList")
         if not ad_list:
             return items
 
-        # Iterar sobre cada artículo
         for article in ad_list.select("article.ma-AdCardV2"):
-            # URL
-            link_tag = article.select_one("a.ma-AdCardV2-link")
-            url = link_tag["href"] if link_tag else ""
+            # --- URL del anuncio ---
+            link_tag = article.select_one("a.ma-AdCardListingV2-TitleLink")
+            url = ""
+            if link_tag:
+                # Algunos enlaces no tienen href directamente
+                url = link_tag.get("href", "")
+                # A veces vienen sin dominio
+                if url and url.startswith("/"):
+                    url = "https://www.milanuncios.com" + url
 
-            # Imagen
+            # --- Imagen ---
             img_tag = article.select_one("img.ma-AdCardV2-photo")
-            photo = img_tag["src"] if img_tag else ""
+            photo = img_tag.get("src", "") if img_tag else ""
 
-            # Título
-            title = img_tag["title"] if img_tag and "title" in img_tag.attrs else "Sin título"
+            # --- Título ---
+            title = "Sin título"
+            if link_tag:
+                title = link_tag.get("title") or link_tag.get_text(strip=True)
+            elif img_tag:
+                title = img_tag.get("title", "Sin título")
 
-            # Precio
-            price_tag = article.select_one(".ma-AdCardV2-headerListing")  # Ajustar según donde aparezca el precio
+            # --- Precio ---
+            price_tag = article.select_one("span.ma-AdPrice-value")
             price = price_tag.get_text(strip=True) if price_tag else "?"
 
-            # Añadir el item a la lista
+            # --- Ubicación ---
+            location_tag = article.select_one("address.ma-AdLocation")
+            location = location_tag.get_text(strip=True) if location_tag else ""
+
+            # --- Descripción ---
+            desc_tag = article.select_one("p.ma-AdCardV2-description")
+            description = desc_tag.get_text(strip=True) if desc_tag else ""
+
+            # --- Marca o categoría (si aplica) ---
+            brand_tag = article.select_one("span.ma-AdTagList-item")
+            brand = brand_tag.get_text(strip=True) if brand_tag else ""
+
+            # --- Crear objeto Item ---
             items.append(Item(
-                id="item_id",
+                id=str(hash(title + url + price)),  # genera ID único reproducible
                 title=title,
                 price=price,
-                description ="",
-                brand_title="",
+                description=description,
+                brand_title=brand,
                 photo=photo,
                 url=url,
-                raw_timestamp=int(time.time())
+                raw_timestamp=int(time.time()),
+                location=location if hasattr(Item, "location") else ""  # opcional
             ))
 
         return items

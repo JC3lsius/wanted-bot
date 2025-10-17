@@ -1,7 +1,7 @@
-from Controlador.vinfinder import Vinfinder
+from Controlador.wanted import Wanted
 
 if __name__ == "__main__":
-    app = Vinfinder()
+    app = Wanted()
     app.run()
 
 
@@ -9,18 +9,18 @@ if __name__ == "__main__":
 # -------------------   
 #   SI 
 
-#   consideraciones extra
+#   funcionalidades extra
 # -------------------
-#     Imprimir un listado con los archivos .conf existentes y permitir cargar uno
+# SI  Imprimir un listado con los archivos .conf existentes y permitir cargar uno
 # SI  Hacer menu y interfaz al iniciar la busqueda que se interrumpa al introducir comando
 #     Deteccion de errores y contador de fallos
-#     Cambio de los parametros de busqueda
+# SI  Cambio de los parametros de busqueda
 #     Compatibilidad con terminal de windows y Linux
-# /-  Si hay un hilo corriendo (el programa) pedir que se cierre, y opciones de segundo plano
+# SI  Si hay un hilo corriendo (el programa) pedir que se cierre, y opciones de segundo plano
 # SI  Control de errores de hilo
 # SI  Modelo Vista Controlador
 # /-  Añadir funcionalidad para scrapear y hacer llamadas a la API de wallapop, milanuncios y ebay
-#     Crear configuraciones de uso de la aplicación, siendo unas más eficientes que otras (modo scrapping, modo analisis, modo normal)
+#     Crear configuraciones de uso de los hilos, siendo unas más eficientes que otras (modo scrapping, modo analisis, modo normal)
 # --  NO PROBABLE IMPLEMENTACIÓN Se puede llegar a crear un recomendador de fiabilidad dependiendo de las reviews del usuario, creación de la cuenta, ventas, redes sociales vinculadas y reviews de usuarios
 
 #   recomendaciones
