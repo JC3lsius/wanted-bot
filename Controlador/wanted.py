@@ -40,9 +40,7 @@ class Wanted:
         
         conf_files = [f for f in os.listdir(".") if "conf" in f]
         print("Se han encontrado estos archivos de configuración:\n")
-        for i, f in enumerate(conf_files, start=1):
-            print(f"{i}.- {f}")
-        print()
+        UIface.imprimirArchivos(conf_files)
 
         # Pedir al usuario que introduzca el numero correspondiente al archivo que quiere usar
         while True:
@@ -212,7 +210,7 @@ class Wanted:
                     UIface.mostrar_error("[MAIN] ⚠️ El hilo no terminó a tiempo y sigue activo, reintentando 1 vez más...")
                     hilo_info["stop"].set()
                     hilo_info["thread"].join(timeout=15)
-                    
+
                     if hilo.is_alive():
                         UIface.mostrar_error("[MAIN] ❌ El hilo sigue activo después del segundo intento. Es posible que no se haya detenido correctamente.")
                         continue

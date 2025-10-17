@@ -57,6 +57,10 @@ def imprimirHilos(hilos_activos):
 
     print("\n" + printed + " ]\n")
 
+def imprimirArchivos(conf_files):
+    for i, f in enumerate(conf_files, start=1):
+        print(f"{i}.- {f}")
+    print()
 
 def imprimirDatos(items):
 
