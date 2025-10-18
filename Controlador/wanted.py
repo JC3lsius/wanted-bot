@@ -39,7 +39,7 @@ class Wanted:
             return
         
         conf_files = [f for f in os.listdir(".") if "conf" in f]
-        print("Se han encontrado estos archivos de configuración:\n")
+        print("\nSe han encontrado estos archivos de configuración:\n")
         UIface.imprimirArchivos(conf_files)
 
         # Pedir al usuario que introduzca el numero correspondiente al archivo que quiere usar
@@ -185,6 +185,8 @@ class Wanted:
                     self.blacklist_proxies,
                     self.proxy_lock)
                     self.hilos_activos.append(hilo_proxy)
+
+                self.restartComponents()
 
             elif option == "4":
 

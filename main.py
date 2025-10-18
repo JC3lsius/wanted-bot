@@ -18,6 +18,7 @@ if __name__ == "__main__":
 #     Compatibilidad con terminal de windows y Linux
 # SI  Si hay un hilo corriendo (el programa) pedir que se cierre, y opciones de segundo plano
 # SI  Control de errores de hilo
+#     Crear un solo hilo proxyfinder y que los hilos accedan a la lista de proxies comun
 # SI  Modelo Vista Controlador
 # /-  Añadir funcionalidad para scrapear y hacer llamadas a la API de wallapop, milanuncios y ebay
 #     Crear configuraciones de uso de los hilos, siendo unas más eficientes que otras (modo scrapping, modo analisis, modo normal)
@@ -35,5 +36,3 @@ if __name__ == "__main__":
 # POSIBLE PORTEO A C++ Y ADAPTAR CHROMEDRIVER Y BUSCADOR A RASPIOS
 
 # SI LA CLASE API VA A SER USADA POR DISTINTOS TIPOS DE HILO, COMPROBAR QUE SE PUEDE REALIZAR UNA INSTANCIA PARA CADA HILO CORRECTAMENTE
-
-# METER INTERRUPCIÓN O BORRADO DE HILO POR ENTRADA DE TECLADO

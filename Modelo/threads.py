@@ -179,7 +179,7 @@ def comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags):
     #sleep(timeWait)
 
 
-# <-> Inicia la búsqueda de artículos en Vinted
+# <-> Inicia la búsqueda de artículos 
 #     Se encarga de buscar artículos y comprobar si cumplen con los criterios establecidos.
 
 def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=[], proxyType=None, proxies=None, blacklist_proxies=None, stop_event=None, typeSearch="API", time_proxy_wait=5, typeApp=None):
