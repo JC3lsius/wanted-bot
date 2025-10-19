@@ -36,11 +36,11 @@ class Wanted:
         # Buscar si existe algún archivo con "conf" en el nombre en el directorio actual
         if not any("conf" in f for f in os.listdir(".")):
             UIface.mostrar_error("No se pudo cargar la configuración."
-                                 + "\nNo se encontró ningún archivo de" 
-                                 + "configuración que contenga 'conf' "
-                                 + "en el nombre.\n Si no existe, crea "
-                                 + "un archivo 'conf.txt' en la misma "
-                                 + "carpeta donde ejecutaste el script.\n")
+                                 f"\nNo se encontró ningún archivo de" 
+                                 f"configuración que contenga 'conf' "
+                                 f"en el nombre.\n Si no existe, crea "
+                                 f"un archivo 'conf.txt' en la misma "
+                                 f"carpeta donde ejecutaste el script.\n")
             sleep(3)
             return
         
