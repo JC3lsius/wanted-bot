@@ -142,8 +142,7 @@ def test_proxy(proxy, test_url="https://www.vinted.es", stop_event=None):
 
 async def send_notification(item):
 
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    filename = f'Hora_envio_{timestamp}'
+    filename = f'Hora_envio_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}'
 
     # Enviar la notificación a Telegram
     bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
@@ -191,19 +190,19 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
     if proxyType and proxyType != "AUTOMATIC":
         wanted = WantedAPI(linkName, typeSearch, proxy=proxyType)
 
+    proxy = None
     while not stop_event.is_set():
 
         # Asignar un proxy si es necesario
-        proxy = None
-        if(proxyType == "AUTOMATIC"):
-            while True:
-                print(f"\n[SEARCH] Buscando proxy...")
-                if proxies:
-                    proxy = proxies.pop(0)
-                    print(f"\n[SEARCH] Proxy Obtenido de la lista: {proxy}")
-                    break
-                if not proxy:
-                    sleep(time_proxy_wait)
+        #if(proxyType == "AUTOMATIC" and proxy == None):
+        #    while True:
+        #        print(f"\n[SEARCH] Buscando proxy...")
+        #        if proxies:
+        #            proxy = proxies.pop(0)
+        #            print(f"\n[SEARCH] Proxy Obtenido de la lista: {proxy}")
+        #            break
+        #        if not proxy:
+        #            sleep(time_proxy_wait)
         
         # Busqueda de artículos y comprobación de items
         wanted.search_number = 0
@@ -214,31 +213,33 @@ def startBusqueda(linkName, timeLimit=15, timeWait=10, urls=[], noTags=[], tags=
         timer = time.time()
         if  type == "API":
             print(f"\n[SEARCH] Buscando articulos en la API...")
-            items = wanted.search_items_vinted_api(linkName, page=1, proxy=proxy)
+            items = wanted.search_items_api(linkName, page=1, proxy=proxy)
         else:
             print(f"\n[SEARCH] Buscando articulos en el HTML...")
             items = wanted.search_items_html(linkName, page=1, proxy=proxy, typeApp=typeApp)
 
-        if len(items) == 0:
-            errors += 1
-            if errors >= 6:
-                blacklist_proxies.append(proxy)
-                print("[THREAD] No se encontraron artículos, cambiando de proxy...")
-                break
-        else:
-            errors = 0
-            print(f"[SEARCH] Artículos encontrados: {len(items)}")
-            imprimirDatos(items)
+        #if len(items) == 0:
+        #    errors += 1
+        #    if errors >= 6:
+        #        blacklist_proxies.append(proxy)
+        #        print("[THREAD] No se encontraron artículos, cambiando de proxy...")
+        #        break
+        #else:
+        #errors = 0
 
-            #for itemcheck in items:
-                #comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
+        print(f"[SEARCH] Artículos encontrados: {len(items)}")
+        imprimirDatos(items)
+
+        #for itemcheck in items:
+            #comprobarItem(itemcheck, timeWait, timeLimit, urls, noTags, tags)
 
 
-            duration = time.time() - timer
-            print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")
-            
-            if duration < timeWait:
-                time.sleep(timeWait - duration)
+        duration = time.time() - timer
+        print(f"[SEARCH] Iteracion duró {duration:.2f} segundos")
+        
+        # Dependiendo del tiempo que haya durado la iteración, esperar lo necesario
+        if duration < timeWait:
+            time.sleep(timeWait - duration)
 
 
 #----------------------#
@@ -257,7 +258,6 @@ def searchThread(params, tags, notTags, proxy, hilos_activos, proxies=None, blac
         return None
 
     stop_event = threading.Event()
-    
     hilo = threading.Thread(
         name="hilo_search -" + str(hilos_activos) + "-",
         target=startBusqueda,

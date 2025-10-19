@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
 #   funcionalidades extra
 # -------------------
+#     Meter funcion de Login
 # SI  Imprimir un listado con los archivos .conf existentes y permitir cargar uno
 # SI  Hacer menu y interfaz al iniciar la busqueda que se interrumpa al introducir comando
 #     Deteccion de errores y contador de fallos

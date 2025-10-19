@@ -26,6 +26,8 @@ class Wanted:
         self.proxies = []
         self.search = "HTML"
         self.typeApp = None
+        self.email = None
+        self.password = None
 
     # <-> Carga la configuración del archivo conf.txt que tiene que estar en la misma carpeta que el script
 
@@ -33,8 +35,12 @@ class Wanted:
 
         # Buscar si existe algún archivo con "conf" en el nombre en el directorio actual
         if not any("conf" in f for f in os.listdir(".")):
-            print("\nNo se encontró ningún archivo de configuración que contenga 'conf' en el nombre.\n")
-            print("Si no existe, crea un archivo 'conf.txt' en la misma carpeta donde ejecutaste el script.\n")
+            UIface.mostrar_error("No se pudo cargar la configuración."
+                                 + "\nNo se encontró ningún archivo de" 
+                                 + "configuración que contenga 'conf' "
+                                 + "en el nombre.\n Si no existe, crea "
+                                 + "un archivo 'conf.txt' en la misma "
+                                 + "carpeta donde ejecutaste el script.\n")
             sleep(3)
             return
         
@@ -47,7 +53,7 @@ class Wanted:
             user_input = input("Introduce el numero del archivo que quieres usar (Enter para salir): ").strip()
             
             if user_input == "":
-                print("No se seleccionó ningún archivo. Saliendo...")
+                UIface.mostrar_error("No se seleccionó ningún archivo. Saliendo...")
                 sleep(1)
                 return
             
@@ -58,13 +64,14 @@ class Wanted:
                     print(f"Has seleccionado: {user_input}")
                     break
                 else:
-                    print("Número fuera de rango. Intenta de nuevo.\n")
+                    UIface.mostrar_error("Número fuera de rango. Intenta de nuevo.\n")
             else:
-                print("Entrada no válida. Introduce un número.\n")
+                UIface.mostrar_error("Entrada no válida. Introduce un número.\n")
 
         self.restartComponents()
         section = ""
 
+        # Leemos el archivo línea por línea
         try:
             with open(user_input, "r", encoding="utf-8") as archivo:
                 for linea in archivo:
@@ -93,6 +100,12 @@ class Wanted:
                     elif linea.startswith("Search:"):
                         section = "search"
                         continue
+                    elif linea.startswith("Login:"):
+                        section = "login"
+                        continue
+                    elif linea.startswith("Use type:"):
+                        section = "use_type"
+                        continue
 
                     # Ignorar líneas vacías que no aportan contenido
                     if not linea:
@@ -112,28 +125,53 @@ class Wanted:
                         self.proxy = linea.strip()
                     elif section == "search":
                         self.search = linea.strip()
+                    elif section == "login":
+                        self.email = linea.strip()
+                        self.password = linea.strip()
                         
         except PermissionError:
-            print("Error: No tienes permisos para leer el archivo.")
+            UIface.mostrar_error("Error: No tienes permisos para leer el archivo.")
         except UnicodeDecodeError:
-            print("Error: El archivo contiene caracteres no reconocidos.")
+            UIface.mostrar_error("Error: El archivo contiene caracteres no reconocidos.")
         except OSError as e:
-            print(f"Error inesperado al leer el archivo: {e}")
+            UIface.mostrar_error(f"Error inesperado al leer el archivo: {e}")
 
-        print("\nConfiguración cargada con éxito:")
-        print(f"URL: {self.url if self.url else 'No definida'}")
-        print(f"Tags: {self.tags}")
-        print(f"Tags a ignorar: {self.notTags}")
-        print(f"Time Params: {self.timeUrlParams}")
-        print(f"Proxy: {self.proxy}")
-        print(f"Search: {self.search}")
-        print("\n\nEspere 1 segundo...")
+        if self.incompatibilidades() is False:
+            return False
+
+        UIface.configuracionCargada(self.url, self.tags, self.notTags, self.timeUrlParams, self.proxy, self.search, self.typeApp, self.email, self.password)
         sleep(1)
 
 
-    # <-> Inicia la búsqueda de artículos en Vinted
-    #     Se encarga de iniciar el hilo de búsqueda y el hilo de búsqueda de proxies
-    #     Si se ha definido un proxy, lo utiliza para la búsqueda de artículos.
+    # <-> Comprueba incompatibilidades en la configuración cargada, o funciones no soportadas
+
+    def incompatibilidades(self):
+
+        if self.typeApp not in ["wallapop", "vinted", "ebay", "milanuncios"]:
+            UIface.mostrar_error("La URL no corresponde a un sitio soportado (wallapop, vinted, ebay, milanuncios).")
+            sleep(2)
+            return False
+        
+        if self.search not in ["HTML", "API"]:
+            UIface.mostrar_error("El término de búsqueda debe ser 'HTML' o 'API'.")
+            sleep(2)
+            return False
+        
+        if self.search == "API" and self.typeApp not in ["wallapop", "milanuncios", "ebay"]:
+            UIface.mostrar_error(f"La búsqueda por API no está soportada para {self.typeApp}.")
+            sleep(2)
+
+        if self.typeApp == "milanuncios" and (self.email is None or self.password is None):
+            UIface.mostrar_error("Para búsquedas en Milanuncios es necesario proporcionar email y password para login.")
+            sleep(2)
+            return False
+
+        return True
+
+
+    # <-> Inicia la búsqueda de artículos
+    #     Se encarga de iniciar el hilo de búsqueda, el hilo de búsqueda de proxies y el monitor de hilos,
+    #     Además de gestionar el menú principal y las opciones del usuario
 
     def run(self):
 
@@ -150,8 +188,7 @@ class Wanted:
                 UIface.borrarPantalla()
                 UIface.checkParams(False)
             elif option == "2":
-                config_result = self.loadConf()
-                if config_result is False:
+                if self.loadConf() is False:
                     UIface.mostrar_error("No se pudo cargar la configuración.")
             elif option == "3":
                 if not self.url:

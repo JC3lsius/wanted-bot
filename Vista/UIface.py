@@ -135,3 +135,15 @@ def mostrar_config(url, tags, notTags):
     print(f"URL: {url}")
     print(f"Tags: {tags}")
     print(f"Tags a ignorar: {notTags}")
+
+def configuracionCargada(url, tags, notTags, timeUrlParams, proxy, search, typeApp, email, password):
+    print("\nConfiguración cargada con éxito:")
+    print(f"URL: {url if url else 'No definida'}")
+    print(f"Tags: {tags}")
+    print(f"Tags a ignorar: {notTags}")
+    print(f"Parámetros de tiempo en URL: {timeUrlParams}")
+    print(f"Proxy: {proxy if proxy else 'No definido'}")
+    print(f"Término de búsqueda: {search if search else 'No definido'}")
+    print(f"Tipo de aplicación: {typeApp if typeApp else 'No definido'}")
+    print(f"Email: {email if email else 'No definido'}")
+    print(f"Password: {'*' * len(password) if password else 'No definido'}")
