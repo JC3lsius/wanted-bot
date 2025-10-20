@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from bs4 import BeautifulSoup
 from Modelo.item import Item
 from typing import List

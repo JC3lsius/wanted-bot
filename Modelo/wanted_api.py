@@ -9,7 +9,6 @@ from Modelo.parser import Parser
 from selenium import webdriver
 
 from Modelo.requester import Requester
-from dataclasses import dataclass
 from httpcore import ProxyError
 from asyncio import subprocess
 from httpx import ReadTimeout
@@ -17,20 +16,20 @@ from bs4 import BeautifulSoup
 from Modelo.item import Item
 from typing import List
 
-import undetected_chromedriver as uc
 import subprocess
 import requests
 import time
-import re
 
 class WantedAPI:
 
-    def __init__(self, locale: str = "www.vinted.es", type_search: str = "API", proxy: str = None):
+    def __init__(self, locale: str = "www.vinted.es", type_search: str = "API", proxy: str = None, email: str =  None, password: str =  None):
         self.api_endpoint = f"http://www.vinted.es/api/v2/catalog/items" 
         self.base_url = f"{locale}" #self.base_url = f"https://{locale}"
         self.locale = locale
         self.search_number = 0
-        self.proxy = proxy
+        self.proxy = proxy 
+        self.email = email
+        self.password = password
 
         if type_search == "API":
             self.client = Requester(self.locale)
@@ -68,6 +67,9 @@ class WantedAPI:
         print(f"[API] Proxy: {proxy}")
         if proxy:
             self.options.add_argument(f'--proxy-server={proxy}')
+
+        if self.email:
+            self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
 
     # <-> Busca artículos usando la API de Vinted

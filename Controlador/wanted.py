@@ -168,6 +168,56 @@ class Wanted:
 
         return True
 
+    # <-> Detiene todos los hilos
+    #
+
+    def stop_all_threads(self, join_timeout=5):
+
+        if not self.hilos_activos:
+            return
+
+        print("[MAIN] Señalando a todos los hilos para que se detengan...")
+
+        # Paso 1: indicar stop a todos los hilos
+        for name, info in list(self.hilos_activos.items()):
+            try:
+                info["stop"].set()
+            except Exception as e:
+                print(f"[MAIN] Error al señalizar el hilo {name}: {e}")
+
+        # Paso 2: esperar (join) a que terminen
+        still_alive = {}
+        for name, info in list(self.hilos_activos.items()):
+            hilo = info["thread"]
+            print(f"[MAIN] Esperando a que {name} termine...")
+            hilo.join(timeout=join_timeout)
+
+            if hilo.is_alive():
+                print(f"[MAIN] ⚠️ El hilo {name} sigue activo.")
+                still_alive[name] = info
+            else:
+                print(f"[MAIN] ✅ {name} detenido correctamente.")
+                del self.hilos_activos[name]
+
+        # Paso 3: si quedan vivos, esperar hasta que terminen
+        if still_alive:
+            print("[MAIN] Algunos hilos siguen activos. Esperando a que finalicen...")
+            while still_alive:
+                for name, info in list(still_alive.items()):
+                    hilo = info["thread"]
+                    if not hilo.is_alive():
+                        print(f"[MAIN] ✅ {name} ha terminado.")
+                        del still_alive[name]
+                        if name in self.hilos_activos:
+                            del self.hilos_activos[name]
+                if still_alive:
+                    print(f"[MAIN] Hilos aún activos: {', '.join(still_alive.keys())}. Esperando 1s...")
+                    sleep(1)
+
+        print("[MAIN] Todos los hilos detenidos correctamente.")
+
+
+
 
     # <-> Inicia la búsqueda de artículos
     #     Se encarga de iniciar el hilo de búsqueda, el hilo de búsqueda de proxies y el monitor de hilos,
@@ -212,16 +262,18 @@ class Wanted:
                     self.proxy_lock,
                     self.thread_limit,
                     self.search,
-                    self.typeApp
+                    self.typeApp,
+                    self.email,
+                    self.password
                 )
 
                 self.hilos_activos[hilo.name] = {"thread": hilo, "stop": stop_event}
                 if(self.proxy == "AUTOMATIC"):
                     # Hilo de búsqueda de proxies
-                    hilo_proxy = threads.proxyfinder(self.proxies, 
+                    hilo_proxy, stop_event_proxy = threads.proxyfinder(self.proxies, 
                     self.blacklist_proxies,
                     self.proxy_lock)
-                    self.hilos_activos.append(hilo_proxy)
+                    self.hilos_activos[hilo_proxy.name] = {"thread": hilo_proxy, "stop": stop_event_proxy}
 
                 self.restartComponents()
 
@@ -245,12 +297,12 @@ class Wanted:
                 hilo_info["stop"].set()
                 hilo_info["thread"].join(timeout=5)
 
-                if hilo.is_alive():
+                if hilo_info["thread"].is_alive():
                     UIface.mostrar_error("[MAIN] ⚠️ El hilo no terminó a tiempo y sigue activo, reintentando 1 vez más...")
                     hilo_info["stop"].set()
                     hilo_info["thread"].join(timeout=15)
 
-                    if hilo.is_alive():
+                    if hilo_info["thread"].is_alive():
                         UIface.mostrar_error("[MAIN] ❌ El hilo sigue activo después del segundo intento. Es posible que no se haya detenido correctamente.")
                         continue
 
@@ -259,6 +311,10 @@ class Wanted:
 
             elif option == "5":
                 UIface.endProgram()
+
+                self.stop_all_threads(join_timeout=5)
+                print("[MAIN] Programa finalizado.")
+
                 return
             
             else:
